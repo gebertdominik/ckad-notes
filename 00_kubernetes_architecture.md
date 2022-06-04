@@ -13,7 +13,7 @@ Introduction to kubernetes architecture - it's not directly mapped to the exam c
 
 According to k8s website it's an "open-source system for automating deployment, scaling, and management of contenerized applications". His precursor is Borg project, developed for 15 years by Google.
 
-Kubernetes is written in Go Langiage - some claim it incorporates the best, whicle some claim the worst parts of C++, Python and Java
+Kubernetes is written in Go Language - some claim it incorporates the best, whicle some claim the worst parts of C++, Python and Java
 
 ## Challenges
 
