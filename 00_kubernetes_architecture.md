@@ -22,7 +22,7 @@ We need a CI pipeline to build, test, and verify our container images. Then we n
 All of those require flexible easy-to-manage network and storage. As containers are lunched on any worker node, the network must join the resource to other existing containers, while still keeping the trafic secure from otherrs. We also need a mainainable storage structure.
 
 ## Architecture
-//TODO
-![kubernetes_architecture.svg](https://myoctocat.com/assets/images/base-octocat.svg)
+
+![kubernetes_architecture.svg](/images/001_kubernetes_architecture.png)
 
 
