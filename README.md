@@ -8,7 +8,7 @@ Preparation notes for CKAD exam
 
 ## Table of contents
 
-0. [Kubernetes Architecture](00_kubernetes_architecture.md) ![](https://us-central1-progress-markdown.cloudfunctions.net/progress/10)
+0. [Kubernetes Architecture](00_kubernetes_architecture.md) ![](https://us-central1-progress-markdown.cloudfunctions.net/progress/40)
 1. Application Design and Build ![](https://us-central1-progress-markdown.cloudfunctions.net/progress/0)
 2. Application Deployment ![](https://us-central1-progress-markdown.cloudfunctions.net/progress/0)
 3. Application observability and maintenance ![](https://us-central1-progress-markdown.cloudfunctions.net/progress/0)
