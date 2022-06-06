@@ -97,3 +97,23 @@ There is a cp database along with possible followers. They communicate with each
 The kube-controller-manager is a core control loop deamon which interacts with the kube-apiserver to determine the state of the clister. If the state doesn't match, the manager will contact the necessary controller to match the desired state. There are several controllers in use, such as endpoints, namespace, and replication.
 
 Remaining in beta as of v1.16, the cloud-controller-manager interacts with agents outside of the cloud. It handles tasks once handled by kube-controller-manager. This allows faster changes withiut altering the core k8s controll process. Each kubelet must use the `--cloud-provider-external` settings passed to the binary.
+
+## Worker nodes
+
+All worker nodes run:
+
+* kubelet
+* kube-proxy
+* container engine, such as `Docker` or `cir-o`.
+
+Also other management deamons are deployed to watch these agents or provide various services.
+
+The kubelet interacts with container engine installed on all the nodes, and makes sure that the containers that need to run are actually running. The kubelet agent is the heavy lifter for changes and configuration on worker nodes. It accepts API calls for Pod specifications (a PodSpec is a JSON or YAML file that describes a Pod). 
+
+Should a Pod require access to storage, Secrets or ConfigMaps, the kubelet will ensure access or creation. It also sends back status to the kube-apiserver for eventual persistence.
+
+The kube-proxy is in charge of managing the network connectivity to the containers. It does so through the use of iptables entries. It also has the userspace mode, in which it monitors Services and Endpoints using a random high-number port to proxy traffic. Use ipvs can be enabled with the expectation it will become the default, replacing iptables.
+
+K8s doesnt have cluster-wide logging yet. Instead, another CNCF project is used, called **Fluentd**. When implemented, it provides a unified logging layer for the cluster, which filters, buffers, and routes messages.
+
+For cluster-wide metrics, **Prometheus** is often deployed to gather metrics from nodes and some applications. 
