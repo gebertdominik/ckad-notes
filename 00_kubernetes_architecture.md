@@ -171,3 +171,22 @@ The diagram below shows a pod with two containers: MainApp and Logger, and two d
 ![pod_shared_ip](/images/002_pod_shared_ip.png)
 
 To communicate with each other, containers can use the loopback interface, write to files on a common filesystem or via inter-process communication (IPC). As a result, co-locating applications in the same pod may have issues. Support for `dual-stack`, IPv4 and IPv6 increases with each `kube-proxy` release. 
+
+## Networking setup
+
+> **Note**
+> 
+> A detailed explanation about the k8s networking model can be found in the [Cluster Networking](https://kubernetes.io/docs/concepts/cluster-administration/networking/) section of k8s documentation.
+
+
+From a network perspective, a Pod can be seen as a virtual machine of physical host. the network needs to assign IP addresses to Pods, and needs to provide traffic routes between all Pods on any nodes.
+
+The main networking challenges to solve in a container orcestration system are:
+
+* Coupled Container2Container communications (this is actually solved by the Pod concept)
+* Pod2Pod communications
+* External2Pod communications
+
+K8s expects the network configuration to enable Pod2Pod communications to be available. It will not do it for us.
+
+Pods are assigned an IP address prior to application containers being started. The service object is used to connect Pods within the network using `ClusterIP` addresses, from outside of the cluster using `NodePort` addresses, and using a load balancer if configured with a `LoadBalancer` service.
