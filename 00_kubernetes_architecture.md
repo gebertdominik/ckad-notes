@@ -25,7 +25,7 @@ All of those require flexible easy-to-manage network and storage. As containers 
 
 ## Architecture
 
-![kubernetes_architecture.svg](/images/001_kubernetes_architecture.png)
+![kubernetes_architecture](/images/001_kubernetes_architecture.png)
 
 Kubernetes in its simplest form is made of one or more central managers(masters) and worker nodes. For testing puposes it can be combined to a single node. The manager runs an API server, scheduler, operators and a datastore to keep the state of the cluster container settings, and the networking configuration.
 
@@ -117,3 +117,57 @@ The kube-proxy is in charge of managing the network connectivity to the containe
 K8s doesnt have cluster-wide logging yet. Instead, another CNCF project is used, called **Fluentd**. When implemented, it provides a unified logging layer for the cluster, which filters, buffers, and routes messages.
 
 For cluster-wide metrics, **Prometheus** is often deployed to gather metrics from nodes and some applications. 
+
+## Pods
+
+**Pod** is the smallert unit we can work with. It can contain multiple containers. Due to shared resources, the design of a Pod typically follows one-process-per-container architecture.
+
+It's not possible to determine which container becomes avaliable first inside a Pod. Containers are started in parallel. We can use `initContainers` to ensure some containers are ready before others in a pod. To support a single process running in container, we may need logging, a proxy, or special adapter. These tasks are often handled by other containers in the same Pod. There is only one IP address per Pod with most netwirk plugins.
+
+A common reason to have multiple containers in a Pod is logging. The term **"Sidecar"** is used to describe a container dedicated to performing a helper task, like handling logs and responding to requests, as the primary container may not have this ability.
+
+Pods can be generated using a generator, which historically, has changed with each release:
+
+```
+kubectl run mypodname --image=apache --generator=run-pod/v1
+```
+
+Or they can be created/deleted using properly formatted JSON or YAML file:
+
+```
+kubectl create -f mypodname.yaml
+kubectl delete -f mypodname.yaml
+```
+
+Other objects will be created by operators/watch-loops to ensure the specifications and current status are the same.
+
+## Services
+
+With every object and agent decoupled we need a flexible and scalable operator which connects resources together and will reconnect, should something die and a replacement is spawned. Each Service is a microservice handling a particular bit of traffic, such as a single **NodePort** or a **LoadBalancer** to distribute inbound requests among many Pods.
+
+A Service also handles access policies for inbound requests, useful for resource control and security.
+
+A service, as well as `kubectl`, uses a **selector** in order to know which objects to connect. There are two selectors currently supported:
+
+* equality-based - can be used as `=`, `==` and `!=`
+* set-based - `in`, `notin` and `exists`
+
+## Operators (also known as watch-loops/controllers)
+
+The use of operators is an important concept for orchestration. They query the current state, compare it against the spec, and execute code based on how they differ. They are shipped with k8s, but custom ones could be created as well.
+
+A simplified view of an operator is an `agent` or `Informer` and a `downstream store`, Using a **DeltaFIFO** queue, the source and downstream are compared. A loop process receives and **obj** or object, which is an array of deltas from the FIFO queue. As long as the delta is not of the type **Deleted**, the logic of the operator is used to create or modify some object until it matches the specification.
+
+The Informer uses the API server as a source requests the state of an object via API call. The data is cached to minimize API server transactions. A similar agent is the **SharedInformer**; objects are often used by multiple other objects. It creates a shared cache of the state for multiple requests.
+
+A **Workqueue** uses a key to hand out tasks to various workers. The standard Go workqueues of rate limiting, delayed, and time queue are typically used.
+
+The `endpoints`, `namespace` and `serviceaccounts` operators each manage the resources for Pods.
+
+## Single IP per Pod
+
+The diagram below shows a pod with two containers: MainApp and Logger, and two data volumes, made available under two mount points. Both Containers share the network namespace of a thrid container, know as the **pause container**. The pause container is used to get an IP address, then all the containers in the pod will use its network namespace. This container is not visible from k8s perspective, but it can be seen by running `sudo docker ps`.
+
+![pod_shared_ip](/images/002_pod_shared_ip.png)
+
+To communicate with each other, containers can use the loopback interface, write to files on a common filesystem or via inter-process communication (IPC). As a result, co-locating applications in the same pod may have issues. Support for `dual-stack`, IPv4 and IPv6 increases with each `kube-proxy` release. 
