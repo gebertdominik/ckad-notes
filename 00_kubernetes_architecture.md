@@ -274,4 +274,29 @@ This config defines a standard Linux bridge named `cni0`, which will give out IP
 > 
 > More information about CNI can be find in the [CNI README](https://github.com/containernetworking/cni)
 
+## Pod-to-Pod Communication
 
+While a CNI plugin can be used to configure the network of a pod and provide a single IP per pod, CNI doesn not help us with pod-to-pod communication across nodes.
+
+The early requirement for k8s was the following:
+
+* All pods can communicate with each other across nodes.
+* All nodes can communicate with all pods.
+* No Network Address Translation (NAT)
+
+Basically, all IPs involved (nods and pods) are routable without NAT. This can be achieved at the physical network infrastructure if we have access to it(e.g. GKE). Or, this can be achieved with a software defined overlay with solutions like: [Weave](https://www.weave.works/oss/net/), [Flannel](https://docs.openshift.com/container-platform/3.4/architecture/additional_concepts/flannel.html), [Calico](https://www.tigera.io/tigera-products/calico/), [Cilium](https://cilium.io/).
+
+Most network plugins now support the use of Network Policies, which act as an internal firewall, limiting ingress and egress traffic.
+
+> **Note**
+>
+> For more information see the [Cluster Networking](https://kubernetes.io/docs/concepts/cluster-administration/networking/) Documentation page or the list of [networking add-ons](https://kubernetes.io/docs/concepts/cluster-administration/addons/).
+
+
+## Resources
+
+* [Large-Scale Cluster Management at Google with Borg" paper](https://ai.google/research/pubs/pub43438)
+* [John Wilkes talking about Borg and Kubernetes podcast](https://www.gcppodcast.com/post/episode-46-borg-and-k8s-with-john-wilkes/)
+* [Kubernetes community hangouts](https://github.com/kubernetes/community)
+* [Community on Slack(go to the #kubernetes-users channel)](http://slack.kubernetes.io/)
+* [Stack Overflow community](https://stackoverflow.com/search?q=kubernetes)
