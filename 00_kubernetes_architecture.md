@@ -193,13 +193,13 @@ Pods are assigned an IP address prior to application containers being started. T
 
 ### ClusterIP
 
-![networking_setup_01](003_networking_setup_01.png)
+![networking_setup_01](images/003_networking_setup_01.png)
 
 A ClusterIP is used for traffic withinn the cluster. A NodePort first creates a ClusterIP, then associates a port of the node to that new ClusterIP. If we createa LoadBalancer service, it will first create a ClusterIP, then a NodePort, and then make an asunc request for an external load balancer. If one is not configured to respond, the `EXTERNAL-IP` will remain in a `pending` state for the life of the service.
 
 ### Kubernetes service flow
 
-![networking_setup_02](004_networking_setup_02.png)
+![networking_setup_02](images/004_networking_setup_02.png)
 
 An **Ingress Controller** or a service mesh like **Istio** can also be used to connect trafic to a Pod. 
 
@@ -207,7 +207,7 @@ This diagram shows a multi-container Pod, two services with one for internal tra
 
 ### Another example
 
-![networking_setup_03](005_networking_setup_03.png)
+![networking_setup_03](images/005_networking_setup_03.png)
 
 Another possible view of a cluster with multiple Pods and services can be seen in this graphic. The diagram shows the Calico Pod running on each node and communicating with a BIRD protocol. There are also three ClusterIP services and a LoadBalancer service trying to show how the frontend may communicate with other Pods. The Pods could have been on any worker, and are shown on one only as an example.
 
