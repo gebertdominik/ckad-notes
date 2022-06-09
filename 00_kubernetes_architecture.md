@@ -172,7 +172,7 @@ The diagram below shows a pod with two containers: MainApp and Logger, and two d
 
 To communicate with each other, containers can use the loopback interface, write to files on a common filesystem or via inter-process communication (IPC). As a result, co-locating applications in the same pod may have issues. Support for `dual-stack`, IPv4 and IPv6 increases with each `kube-proxy` release. 
 
-## Networking setup
+## Networking Setup
 
 > **Note**
 > 
@@ -190,3 +190,88 @@ The main networking challenges to solve in a container orcestration system are:
 K8s expects the network configuration to enable Pod2Pod communications to be available. It will not do it for us.
 
 Pods are assigned an IP address prior to application containers being started. The service object is used to connect Pods within the network using `ClusterIP` addresses, from outside of the cluster using `NodePort` addresses, and using a load balancer if configured with a `LoadBalancer` service.
+
+### ClusterIP
+
+![networking_setup_01](003_networking_setup_01.png)
+
+A ClusterIP is used for traffic withinn the cluster. A NodePort first creates a ClusterIP, then associates a port of the node to that new ClusterIP. If we createa LoadBalancer service, it will first create a ClusterIP, then a NodePort, and then make an asunc request for an external load balancer. If one is not configured to respond, the `EXTERNAL-IP` will remain in a `pending` state for the life of the service.
+
+### Kubernetes service flow
+
+![networking_setup_02](004_networking_setup_02.png)
+
+An **Ingress Controller** or a service mesh like **Istio** can also be used to connect trafic to a Pod. 
+
+This diagram shows a multi-container Pod, two services with one for internal traffic only, and an ingress controller. The siddecar container, acting as a logger, is shown writing out stoarage, just to show a more complete Pod. The pause container is only used to retrieve the namespace and IP addresses.
+
+### Another example
+
+![networking_setup_03](005_networking_setup_03.png)
+
+Another possible view of a cluster with multiple Pods and services can be seen in this graphic. The diagram shows the Calico Pod running on each node and communicating with a BIRD protocol. There are also three ClusterIP services and a LoadBalancer service trying to show how the frontend may communicate with other Pods. The Pods could have been on any worker, and are shown on one only as an example.
+
+Note that this graphic is not an expansion of the previous one.
+
+> **Note**
+>
+>Useful slide deck about Kubernetes networking, created by Tim Hockin - one of the lead k8s developers, can be found [here](https://speakerdeck.com/thockin/illustrated-guide-to-kubernetes-networking)
+
+
+## API Call Flow
+
+![kubernetes_architecture](/images/001_kubernetes_architecture.png)
+
+1. API Call(for example to create deployment via `kubectl`) to `kube-apiserver`
+2. `kube-apiserver` sends the information about a new deployment request to `etcd`
+3. A moment later `kube-controller-manager checks` with `kube-apiserver` if the spec has changed(it changed in the previous point)
+4. `kube-controller-manager` asks `kube-api-server` if the deployment exists (it doesn't exist)
+5. `kube-controler-manager` asks `kube-api-server` to create the deployment
+6. `kube-apiserver` creates the deployment - it perists the information about new deployment in `etcd` database
+7.  New deployment operator requests `kube-controller-manager` via `kube-apiserver` for a replica set, following the same process.
+8.  New replicaset operator requests `kube-controller-manager` via `kube-apiserver` for a pod, following the same process 
+9. `kube-apiserver` asks `kube-scheduler`, which of the available worker nodes should get sent this new pod spec
+10. `kube-scheduler` returns information to `kube-apiserver` on which node the pod should be created.
+11. `kube-apiserver` sends the information to the particular `kubelet` on worker node. It also sends a networking information to each of the `kube-proxies`, so they are aware of the new networking configuration(even to the local `kube-proxy` on control plane nodes)
+12. `kubelet` downloads all the config maps, secrets, mounts filesystems etc.
+13. `kubelet` sends the message to local engine(usually `docker`)
+14. `docker` creates containers
+15. `docker` sends back information to `kubelet` about created containers
+16. `kubelet` sends back information to `kube-apiserver` about created pod
+17. `kube-apiserver` persists information about the pod in `etcd` database
+
+Then the next time that a request is made by the `kube-controller-manager` about the status, it's able to update it, and says the pod exsists. All the watchloops continue asking: "What's my spec, and what's my status? Do they match?"
+
+## CNI Network Configuration file
+
+To provide container networking, Kubernetes is standardizing on the **Container Network Interface(CNI)** specification. As of v1.6.0, `kubeadm` (the k8s bootstratping tool) uses CNI as the default network interface mechanism.
+
+CNI is an emerging specification with associated libraries to write plugins that configure container networking and remove allocated resources when the container is deleted. Its aim is to provide a common interface between various networking solutions and container runtimes. As the CNI specification is language-agnostic, there are many plugins from Amazon ECS, Clound Foundry etc.
+
+With CNI, we can write a network configuration file:
+
+```
+{
+   "cniVersion": "0.2.0",
+   "name": "mynet",
+   "type": "bridge",
+   "bridge": "cni0",
+   "isGateway": true,
+   "ipMasq": true,
+   "ipam": {
+       "type": "host-local",
+       "subnet": "10.22.0.0/16",
+       "routes": [
+           { "dst": "0.0.0.0/0" }
+            ]
+   }
+}
+```
+
+This config defines a standard Linux bridge named `cni0`, which will give out IP addresses in the subnet `10.22.0.0./16`. The bridge plugin will configure the network interfaces in the corect namespaces to define the container network properly.
+
+> **Note**
+> 
+> More information about CNI can be find in the [CNI README](https://github.com/containernetworking/cni)
+
+
