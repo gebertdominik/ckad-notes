@@ -127,4 +127,27 @@ Just as we want to wait for a container to be ready for traffic, we also want to
 
 Useful for testing an app which takes a long time to start. If kubelet uses `startupProbe`, it will disable liveness and readiness checks until the app passes the test. The duration until the container is considered failed is failureThreshold times periodSeconds. For example if our periodSeconds was set to five seconds, and our failureThreshold was set to ten, kubelet would check the app every five seconds until it succeeds, or is considered failed after a total of 50 seconds.
 
+## Testing
+
+While custom-built tools may be best at testing a deployment, there are some built-in `kubectl` arguments to begin the process. The first one is `describe` and the next would be `logs`
+
+Details, conditions, volumes and events for an object can be seen with describe. The `Events` at the end of the output presents a chronological and node view of cluster actions and associated messages. A simple nginx pod may show the following output:
+
+`kubectl describe pod test 1`
+
+```
+....
+Events:  
+  Type    Reason     Age   From               Message  
+  ----    ------     ----  ----               -------  
+  Normal  Scheduled  18s   default-scheduler  Successfully assigned default/test1 to master   
+  Normal  Pulling    17s   kubelet, master    Pulling image "nginx"  
+  Normal  Pulled     16s   kubelet, master    Successfully pulled image "nginx"  
+  Normal  Created    16s   kubelet, master    Created container nginx  
+  Normal  Started    16s   kubelet, master    Started container nginx
+```
+
+A next step in testing may be to look at the output of containers within a pod. Not all applications will generate logs, so it could be difficult to know if the lack of output is due to error or configuration.
+
+`kubectl logs test1`
 
