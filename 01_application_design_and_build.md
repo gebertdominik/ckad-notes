@@ -151,3 +151,15 @@ A next step in testing may be to look at the output of containers within a pod. 
 
 `kubectl logs test1`
 
+## Helm
+
+In addition to pushing the image to a repository, we may want to provide the image and other objects, such that they can be easily deployed. The Helm package manager is the package manager for K8s.
+
+Helm uses a chart, or collection of YAML files to deploy one or more objects. For flexibility and dynamic installation, a `values.yaml` file is a part of a chart and is often edited before deployment.
+
+A chart can come from many locations with [ArtifactHub](https://artifacthub.io/) becoming a centralized site to publish and find charts.
+
+
+# Design
+
+## Objectives
