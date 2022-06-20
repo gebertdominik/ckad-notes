@@ -163,3 +163,86 @@ A chart can come from many locations with [ArtifactHub](https://artifacthub.io/)
 # Design
 
 ## Objectives
+
+* Define an application's resource requirements.
+* Understand multi-container Pod design patterns: sidecar, adapter, ambassador.
+* Discuss application design concepts.
+
+## Traditional Applications - Considerations
+
+Optimal k8s deployment design changes are more than just contenerisation of an application. Traditional apps were built and deployed with the expectation of long-term processes and strong interdependence.
+
+For example, and Apache web server is highly customizable. Often, the server would be configured and tweaked without interruption. The app may be migrated to larger servers if needed. The build and maintenance of the app assumes the instance would run without reset and have persistent and tightly coupled connections to other resources, such as networks and storage.
+
+In early usage of containers, apps were contenerized without redevelop,ent. This lead to issues after resource failure, or upon upgrade, or configuration. The cost and hassle of redesign and re-implementation should be taken into account.
+
+## Decoupled Resources
+
+The use of decoupled resources is integral to k8s. Instead of an application using a dedicated port and socket, for the life of the instance, the goal is for each component to be decoupled from other resources. The expectation and software development toward separation allows for each component to be removed, replaced, or rebuilt.
+
+Instead of hard-coding a resource in an application, an intermediary, such as Service, enables connection and reconnection to other resources, providing flexibility. A single machine is no longer required to meed the application and user needs - any number of systems coyld be brought together to meet the those needs when, and, as long as, necessary.
+
+Also Kubernetes devleopers can optimize a particular function with fewer considerations of others objects.
+
+## Transience
+
+Equally important is the expectation of transience. Each object should be developed with the expectation that other componenets will die and be rebuilt. With any and all resources planned for transient relationships to others, we can update versions or scale usage in an easy manner.
+
+An upgrade is perhaps not quite correct therm, as the existing app doeas not survive. Instead controller terminates the container and deploys a new one to replace it, using a different version of the application or setting. Typically, traditional apps were not written this way, opting toward long-term relationships for efficiency and ease of use.
+
+## Flexible Framework
+
+Resources working together, but decoupled from each other and without expectation of individual permanent relationship, gain flexibility, higher availability and easy scalability. Instead of a monolithic Apache server, we can deploy a flexible number of nginx servers, each handling a small part of the workload. The goal is the same, but the framework of the solution is distinct.
+
+A decoupled, flexible and transient application and framework is not the most efficient. In order for the k8s orhestration to work, we need a series of agents, otherwise known as controllers or watch-loops, to constantly monitor the current cluster state and make changes until that state matches the declared configuration.
+
+The commoditization of hardware has enabled the use of many smaller servers to handle a larger workload, instead of single, huge systems.
+
+## Managing Resource Usage
+
+K8s allows us to scale clusters. An understanding of how the k8s clusters view the resources is an important consideration. The `kube-scheduler`, or a custom scheduler, uses the `PodSpec` to determine the best node for deployment.
+
+In addition to administrative tasks to grow or shrink the cluster or the number of Pods, there are autoscalers which can add or remove nodes or pods, with plans for one which uses `cgroup` settings to limit CPU and memory usage by individual containers.
+
+By default, Pods use as much CPU and memory as the workload requires, behaving and coexisting with other Linux processes. Through the use of resource requests, the scheduler will only schedul a Pod to a node if resources exist to meet all requests on that node. The scheduler takes these and several other factors into account when selecting a node for use.
+
+Monitoring the resource usage cluster-wide is not an included feature of k8s. Other projects, like Prometheus, are used instead. In order to view resource consumption issues locally, we can use `kubectl describe pod` command. We may only know of issues after the pod has been terminated.
+
+### CPU
+
+CPU requests are made in CPU units - millicores(or millicpu). A request for .7 of a CPU would be 700 millicore. Should a container use more resources than allowed, it won't be killed, but will be throttled. If the limits are set to the pod instead of a particular container, all usage of the containers is considered and all containers are throttled at the same time.
+
+Each millicore is not evaluated, so using more than the limit is possible. The exact amount of overuse is not definite. Note the notation or syntax often found in the documentation:
+
+```
+spec.containers[].resources.limits.cpu
+spec.containers[].resources.requests.cpu
+```
+
+The value of CPUs is not relative. It does not matter how many exists, or if other Pods have requirements. One CPU in k8s is equivalent to:
+
+* 1 AWS vCPU
+* 1 GCP Core
+* 1 Azure vCore
+* 1 Hyperthread on a bare-metal processor with Hyperthreading.
+
+### Memory(RAM)
+
+With Docker entinge, the `limits.memory` value is converted to an integer value and becomes the value to the `docker run --memory <value> <image>` command. The handling of a container which exceeds its memory limit is not definite. It may be restarted, or, if it asks for more than the memory request setting, the entire Pod may be evicted from the node.
+
+```
+spec.containers[].resources.limits.memory
+spec.containers[].resources.requests.memory
+```
+
+### Ephemeral Storage
+
+Container files, logs, and EmptyDir storage, as well as k8s cluster data, reside on the root filessystem of the host node. As storage is a limited resource, we may need to manage it as other resources. The scheduler will only choose a node with enough space to meet the sum of all the container requests. Shoud a particular container, or the sum of the containers in a Pod, use more than the limit, the Pod will be evicted.
+
+```
+spec.containers[].resources.limits.ephemeral-storage
+spec.containers[].resources.requests.ephemeral-storage
+```
+
+## Using Label Selectors
+
