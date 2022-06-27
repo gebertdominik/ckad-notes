@@ -246,3 +246,149 @@ spec.containers[].resources.requests.ephemeral-storage
 
 ## Using Label Selectors
 
+Labels are allow for objects to be selected, which may not share other characteristics. For example, if a developer were to label their pods using their name, they could affect all of their pods, regardless of the application or deployment the pods were using.
+
+Labels are how operators track and manage objects. As a result, if we were hard-code the same label for two objects, they may be managed by different operators and cause issues.
+
+Consider the possible ways we may want to group our pods and other objects in production. Perhaps we may use `dev` and `prod` labels to differentiate the state of the application. Perhaps we may want to add labels for the department, team and primary application developer.
+
+Selectors are namespace-scoped, but we may use `--all-namespace` argument to select matching objects in all namespaces.
+
+The labels, annotations, name and metadata of an objec can be found near the top of
+
+`kubectl get object-name -o yaml`
+
+Which returns for example:
+
+```
+apiVersion: v1
+kind: Pod
+metadata:  
+  annotations:     
+    cni.projectcalico.org/podIP: 192.168.113.220/32   
+  creationTimestamp: "2020-01-31T15:13:08Z"   
+  generateName: object-name-1234-   
+  labels:     
+    app: object-name    
+    pod-template-hash: 1234   
+  name: object-name-1234-vtlzd
+  ...
+```
+
+Using this output we could select the pod would be to use the `app` pod label. The use of `-l` or `--selector` options can be used with kubectl.
+
+` kubectl -n test get --selector app=object-name pod`
+
+```
+NAME                     READY  STATUS   RESTARTS  AGE
+objecgt-name-1234-vtlzd  1/1    Running  0         25m
+
+```
+
+There are several built-in object labels. For example nodes have labels such as the `arch`, `hostname`, and `os` which could be used for assigning pods to a particular node, or type of node.
+
+
+`kubectl get node worker`
+
+```
+...
+   creationTimestamp: "2020-05-12T14:23:04Z"
+   labels:
+     beta.kubernetes.io/arch: amd64
+     beta.kubernetes.io/os: linux
+     kubernetes.io/arch: amd64
+     kubernetes.io/hostname: worker
+     kubernetes.io/os: linux
+   managedFields:
+...
+```
+
+The `nodeselector:` entry in the podspec could use this label to cause a pod to be deployed on a particular node with an entry such as:
+
+```
+     spec:
+       nodeSelector:
+         kubernetes.io/hostname: worker
+       containers:
+```
+
+## Multi-Container Pods
+
+Let's see how common patterns can assit our primary application
+
+### Sidecar
+
+The idea for a sidecar container is to add some functionality not present in the main container. Rather than bloating code, which may not be necessary in other deployments, adding a container to handle a function such as logging solves the issue, while remaining decoupled and scalable. Prometheus monitoring and Fluentd logging leverage sidecar containers to collect data.
+
+### Adapter
+
+The basic purpose of an adapter container is to modify data, either on ingress or egress, to match some other need. Perhaps, an existing enterprise wide monitoring tools has particular data format needs. An adapter would be an efficient way to standarize the output of the main container to be ingested by the monitoring tool, without having to modify the monitor or the containerized application. An adapter container transforms multiple applications to singular view.
+
+### Ambassador
+
+[Ambassador](https://www.getambassador.io/) is "an open source, k8s-native API gateway for microservices built on Envoy". It allows for access to the outside world without having to implment a service or another entry in an ingress controller: proxy local connection, reverse proxy, limits HTTP requests, re-route from the main container to the outside word.
+
+### initContainer
+
+The use of an initContainer allows one or more containers to run only if one or more previous containers run and exit successfully. For example, we could have a checksum verification scan container and a security scan container check the intended containers. Only if both containers pass the checks would the following group of containers be attempted. We can see an example below:
+
+```
+spec:
+  containers:
+  - name: intended
+    image: workload
+  initContainers:
+  - name: scanner
+    image: scanapp
+```
+
+## Custom Resource Definition
+
+K8s allows for dynamic addition of new resources. Once those **Custom Resources (CRD)** have been added, the objects can be created and accessed using standard calls and commands like `kubectl`. The creation of a new object stores new structured data in the etcd database and allows access via kube-apiserver.
+
+To make a new custom resource part of a declarative API, there needs to be a controller to retrieve the structured data continually and act to meet and maintain the declared state. 
+
+There are two ways to add custom resources to k8s cluster.
+
+* add Custom Resource Definition to the cluster - which is easiest option, but less flexible,
+* use Aggregated API, which requires a new API server to be written and added to the cluster, but it's more flexible
+
+As we have learned, the decoupled nature of Kubernetes depends on a collection of watcher loops, or operators, interrogating the kube-apiserver to determine if a particular configuration is true. If the current state does not match the declared state, the controller makes API calls to modify the state until they do match. If we add a new API object and operator, we can use the existing kube-apiserver to monitor and control the object. The addition of a Custom Resource Definition will be added to the cluster API path, currently under `apiextensions.k8s.io/v1`.
+
+More information on the operator framework and SDK can be found on [GitHub](https://github.com/operator-framework). You can also search through existing operators which may be useful on the [OperatorHub website](https://operatorhub.io/).
+
+## Points to ponder
+
+* Is my application as decoupled as it could possibly be? Is there anything I could take out, or make its own container?
+
+These essential questions often require an examination of the application within the container. Optimal use of k8s is not typically found by containerization of a legacy app and deployment. Rather, most apps are rebuilt entirely, with a focus on decoupled micro-services.
+
+When every container can survive any other containers regular termination, without the end-user noticing, we have probably decoupled the application properly.
+
+* Is each container transient, does it expect and have code to properly react when other containers are transient? Could I run Chaos Monkey to kill ANY and multiple Pods, and my user would not notice?
+
+Most k8s deployments are not as transient as they should be, especially among legacy applicaitons. The developer holds on to a previous approach and des not create the contenerized app such taht every connection and communication is transient and will be terminated. With code waiting for the service to connect to a replacement Pod and the containers within.
+
+Some will note that tis is not as efficient as it could be. This is correct. We are not optimizing and working against the orchestration tool. Instead, we are taking adbantage of the decoupled and transient environment to scale and use only the particular microservice the end user needs.
+
+
+* Can I scale any particular component to meet workload demand? Have I used the most open standard stable enough to meet my needs?
+
+The minimization of the app, breaking it down into the smallest parts possible, often goeas against what developers have spent an entire career doing. Each division requires more code to handle errors and communication, and is less efficient than a tightly coupled application. 
+
+Machine code is very efficient for example, but not portable. Instead, code is written in a higher level language, which may not be interpreted to run as efficiently, but it will run in varied environments. Perhaps approach code meant for k8s in the sense that we aremaking the highest, and most non-specific way possible. if we have broken down each component, then we can scale only the most necessary component. This way, the actual workload is more efficient, as the only software consuming CPU cycles is that which the end users requires. There would be minimal application overhead and waste.
+
+The second issue can take a while to investigate, but it's usually a good investment. With thight production schedules, some may use what they know best, or what is easiest at the moment. Due to fast changing nature, or CI/CD, of production environment, this may lead to more work in the long run.
+
+## Jobs
+
+During the redesign phase we may consider that microservices may not need to run all the time. The use of **Jobs** and **CronJobs** can further assist with implementing decoupled and transient microservices.
+
+Jobs are part of the `batch` API group. They are used to run a set number of pods to completion. If a pod fails, it will be restarted until the number of completion is reached.
+
+While they can be seen as a way to do batch processing in k8s, they can also be used to run one-off pods. A Job spec will have a parallelism and a completition key. If ommited, they will be set to one. If they are present, the parallelism number will set the number of pods that can run concurrently, and the completion number will set how many pods needed to run successfully for the Job itself to be considered done. Several Job patterns can be implemented, like a traditional work queue.
+
+Cronjobs work in a similar manner to Linux jobs, with the same time syntax. The **CronJob** operator creates a **Job** operator at some point during the configured minute. Depending on the duration of the pods a Job runs, there are cases where a job would not be run during a time period or could  run twice; as a result, the requestd Pod should be idempotent.
+
+An option `spec` field is `.spec.soncurrencyPolicy` which determines how to handle existing jobs, should the time segment expire. If set to `Allow`, the default, another concurrent job will be rin and twice as many pods would be running. If set to `Forbid`, the current job continues and the new job is skipped. A value of `Replace` cancels the current job and the controlled pods, and starts a new job in its place.
+
