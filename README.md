@@ -5,6 +5,7 @@ Preparation notes for CKAD exam
 
 * [Curriculum](https://github.com/cncf/curriculum)
 * [Set up multinode cluster using kind](https://mcvidanagama.medium.com/set-up-a-multi-node-kubernetes-cluster-locally-using-kind-eafd46dd63e5)
+* [CKAD Exercises](https://github.com/dgkanatsios/CKAD-exercises)
 
 ## Table of contents
 
