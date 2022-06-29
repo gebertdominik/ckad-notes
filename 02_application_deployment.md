@@ -147,4 +147,7 @@ kubectl get pvc
 
 ## Phases to Persistent Storage
 
-
+```mermaid
+flowchart LR
+   Provisioning --> Binding --> Using --> Releasing --> Reclaiming
+```
