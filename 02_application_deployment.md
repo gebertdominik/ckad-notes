@@ -84,23 +84,67 @@ In GCE or AWS we can use volumes of type `GCEpersistentDisk` or `awsElasticBlock
 
 ### Other Volume types
 
-* azureDisk
-* azureFile
-* csi
-* downwardAPI
-* fc (fibre channel)
-* flocker
-* gitRepo
-* local
-* projected
-* portworxVolume
-* quobyte
-* scaleIO
-* secret
-* storageos
-* vsphereVolume
-* persistentVolumeClaim
+* `azureDisk`
+* `azureFile`
+* `csi`
+* `downwardAPI`
+* `fc` (fibre channel)
+* `flocker`
+* `gitRepo`
+* `local`
+* `projected`
+* `portworxVolume`
+* `quobyte`
+* `scaleIO`
+* `secret`
+* `storageos`
+* `vsphereVolume`
+* `persistentVolumeClaim`
 * ...
 
 ## Shared Volume Example
+
+The following YAML file, for Pod ExampleA creates a Pod with two containers, one called alphacont, the other called betacont both with access to a shared volume called sharedvol:
+
+```
+  containers:
+   - name: alphacont
+     image: busybox
+     volumeMounts:
+     - mountPath: /alphadir
+       name: sharevol
+   - name: betacont
+     image: busybox
+     volumeMounts:
+     - mountPath: /betadir
+       name: sharevol
+   volumes:
+   - name: sharevol
+     emptyDir: {}   
+```
+
+```
+$ kubectl exec -ti exampleA -c betacont -- touch /betadir/foobar
+$ kubectl exec -ti exampleA -c alphacont -- ls -l /alphadir
+
+total 0
+-rw-r--r-- 1 root root 0 Nov 19 16:26 foobar
+
+```
+
+We can use `emptyDir` or `hostPath` easily - they don't require any additional setup. Note that one container wrote, and the other container had immediate access to the data. There is nothing to keep the containers from overwriting the other's data. Locking or versioning considerations must be part of the application to avoid corruption.
+
+## Persistent Volumes and Claims
+
+A `PersistentVolume`(PV) is a storage abstraction used to retain data longer than the Pod using it. Pods define a volume of type `PersistentVolumeCLaim`(PVC) with various parameters for size and possibly the type of backend storage known as its `StorageClass`. The cluster then attaches the `PersistentVolume`.
+
+K8s will dynamically use volumes that are available, irrespective of its storage type, allowing claims to any backend storage.
+
+```
+kubectl get pv
+kubectl get pvc
+```
+
+## Phases to Persistent Storage
+
 
