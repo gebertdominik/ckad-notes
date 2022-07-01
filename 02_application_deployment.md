@@ -251,9 +251,81 @@ parameters:
 
 ## Secrets
 
+Secrets are for data we don't want to be readable by the naked eye, like passwords etc.
+
+`kubectl get secrets`
+`kubectl create secret generic --help`
+`kubectl create secret generic mysql --from-literal=password=root`
+
+A secret is not encrypted by default, only base64-encoded. We can see the encoded string iside the secret with kubectl. The secret will be decoded and be presented as a string saved to a file. The file can be used as an environmental variable or in a new directory, similar to the presentation of a volume.
+
+In order to encrypt secrets we must create an `EncryptionConfiguration` object with a key and proper identity. Then the `kube-apiserver` needs the `--encryption-provider-config` flag set to a previously configured provider, such as `aescbc` or `ksm`. Once this is enabled, we need to recreate every secret as they are encrypted upon write. Multiple keys are possible. Each key for a provider is tried during decryption oprocess. The fist key of the first provider is used for encryption. To rotate keys, first create a new key, restart (all) `kube-apiserver` processes, then recreate every secret.
+
+```
+$ echo LFTr@1n | base64
+TEZUckAxbgo=
+
+$ vim secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: LF-secret
+data:
+  password: TEZUckAxbgo=
+
+```
+
+Prior to Kubernetes v1.18 secrets (and configMaps) were automatically updated. This could lead to issues. If a configuration was updated and a Pod restarted, it may be configured differently than other replicas. In newer versions these objects can be made immutable.
+
 ### Using Secrets via Environment Variables
+
+A secret can be used as an environmental variable in a Pod. Here is an example:
+
+```
+...
+spec:
+    containers:
+    - image: mysql:5.5
+      name: mysql
+      env:
+      - name: MYSQL_ROOT_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: mysql
+            key: password
+
+```
+
+There is no limit to the number of Secrets used, but there is a 1MB limit to their size. Secrets are stored in the `tmpfs` storage on the host node, and are only sent to the host running Pod. All volumes requested by a Pod must be mounted before the containers within the Pod are started. So, a secret must exist prior to being requested.
 
 ### Mounting Secrets as Volumes
 
+We can also mount secrets as files using a volume definition in a Pod manifest. The mount path will contain a file whose name will be the key of the secret created with the `kubectl create secret` step eariler.
 
+```
+...
+spec:
+    containers:
+    - image: busybox
+      name: busy
+      command:
+        - sleep
+        - "3600"
+      volumeMounts:
+      - mountPath: /mysqlpassword
+        name: mysql
+    volumes:
+    - name: mysql
+      secret:
+        secretName: mysql
+```
+
+Once the pod is running, we can verify that the secret is accessible in the container:
+
+```
+$ kubectl exec -ti busybox -- cat /mysqlpassword/password
+LFTr@1n
+```
+
+## Portable Data with ConfigMaps
 
