@@ -327,5 +327,179 @@ $ kubectl exec -ti busybox -- cat /mysqlpassword/password
 LFTr@1n
 ```
 
-## Portable Data with ConfigMaps
+## ConfigMaps
 
+ConfigMap is a similar concept to Secret but the data is not encoded. ConfigMap decouples a container image from configuration artifacts.
+
+They store data as sets of key-value pairs or plain configuration files in any format. The data can come from a collection of files or all files in a directory. It can also be populated from a literal value.
+
+ConfigMaps can be consumed in various ways:
+
+* Pod environmental variables from single or multiple ConfigMaps
+* Use ConfigMap values in Pod commands
+* Populate Volume from ConfigMap
+* Add ConfigMap data to specify path in Volume
+* Set file ames and access mode in Volume from ConfigMap data
+* Can be used by system components and controllers.
+
+Let's say we have `config.js` file. We can create a ConfigMap that contains this file. The `configmap` object will have `data` section containing the content of the file:
+
+```
+$ kubectl get configmap foobar -o yaml
+
+```
+```
+kind: ConfigMap
+apiVersion: v1
+metadata: 
+    name: foobar
+data:
+    config.js: |
+        {
+...
+```
+
+Like secrets, we can use ConfigMaps as env variables or using a volume mount. They must exist prior to being used by a Pod, unless marked as `optional`. They also reside in a specific namespace.
+
+In the case of environment variables, our Pod manifest will use `valueFrom` key and the `configMapKeyRef` value to read the values. For instance:
+
+```
+env:
+- name: SPECIAL_LEVEL_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: special-config
+      key: special.how
+```
+
+With volumes, we can define a volume with the configMap type in our pod and mount it where it needs to be used:
+
+```
+volumes:
+  - name: config-volume
+    configMap:
+      name: special-config
+```
+
+## Deployment Configuration Status
+
+The `status` output is generated when the information is requested:
+
+```
+status:
+  availableReplicas: 2
+  conditions:
+  - lastTransitionTime: 2017-12-21T13:57:07Z
+    lastUpdateTime: 2017-12-21T13:57:07Z
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  observedGeneration: 2
+  readyReplicas: 2
+  replicas: 2
+  updatedReplicas: 2
+
+```
+
+The output above shows what the same deployment were to look like if the number of replicas were increased to 2. The times are different than when the deployment was first generated.
+
+* `availableReplicas`
+
+Indicates how many were configured by `ReplicaSet`. This would be compared to the later value of `readyReplicas`, which would be used to determine if all replicas have been fully generated and without error.
+
+* `observedGeneration`
+
+Shows how often the deployment has been updated. This information can be used to understand the rollout and rollback situation of the deployment.
+
+## Scaling and Rolling Updates
+
+The API server allows for the configurations settings to be updated for most values(but some of them are immutable, depends on k8s version). A common update is to change number of replicas running.
+
+```
+$ kubectl scale deploy/dev-web --replicas=4
+deployment "dev-web" scaled
+
+$ kubectl get deployments
+NAME     DESIRED  CURRENT  UP-TO-DATE  AVAILABLE  AGE
+dev-web  4        4        4           1          12m
+```
+
+Non-immutable values can be also edited via a text editor.
+
+```
+$ kubectl edit deployment nginx
+
+....
+      containers:
+      - image: nginx:1.8 #<<---Set to an older version
+        imagePullPolicy: IfNotPresent
+        name: dev-web
+....
+
+```
+
+Changing the deployment would trigger a rolling update of the deployment.
+
+## Deployment Rollbacks
+
+With the `ReplicaSets` of a `Deployment` being kept, we can also roll back to a previous revision by scaling up and down the ReplicaSet.
+
+Another option to perform a rollback is the `--record` option of the `kubectl` command, which allows annotation in the resource definition. The `create` generator does not have a record function. In this case, we will follow `mydeploy` but any deployment and app should work 
+
+> **Warning**
+> 
+> The `--record` option has been deprecated. There is not a suggested replacement, but it's still possible to use own annotations to track the intended changes.
+
+```
+
+ kubectl set image deploy mydeploy myapp=myapp:2.9 --record
+deployment.apps/mydeploy image updated
+
+$ kubectl get deployments mydeploy -o yaml
+metadata:
+    annotations:
+            deployment.kubernetes.io/revision: "1"
+            kubernetes.io/change-cause: kubectl set image deploy myapp=myapp:2.9 --record=true
+
+```
+
+Should an update fail, we can roll back the change to a working version with `kubectl rollout undo`:
+
+```
+$ kubectl set image deployment/mydeploy myapp=myapp:3.0
+deployment.apps/mydeploy image updated
+
+
+$ kubectl rollout history deployment/mydeploy
+deployment.apps/mydeploy
+REVISION     CHANGE-CAUSE
+1            <none>
+2            kubectl set image deploy myapp=myapp:2.9 --record=true
+
+$ kubectl get pods
+NAME                       READY    STATUS               RESTARTS    AGE
+mydeploy-2141819201-tcths  0/1      ImagePullBackOff     0           1m​
+
+$ kubectl rollout undo deployment/mydeploy
+deployment.apps/mydeploy rolled back
+
+
+
+$ kubectl get pods
+NAME                       READY STATUS  RESTARTS AGE
+mydeploy-33781556678-eq5i6 1/1   Running 0        7s
+
+```
+
+We can roll back to a specific revision with the `--to-revision=2` option. We can also edit a Deployment using the `kubectl edit` command. One can also pause a Deployment, and then resume.
+
+```
+$ kubectl rollout pause deployment/mydeploy
+deployment.apps/test2 paused
+
+$ kubectl rollout resume deployment/mydeploy
+deployment.apps/test2 paused
+```
+
+Note that we can still do a rolling update on ReplicationControllers with the `kubectl rolling-update` command, but this is done on the client side. Hence, if we close our client, the rolling update will stop.
