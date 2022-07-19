@@ -28,7 +28,7 @@ To access the API to perform any action in k8s, we need to go through three main
 * Authorization (RBAC or Webhook)
 * Admission Controls
 
-![access_contro_overview](/images/005_access_contro_overview.svg)
+![access_contro_overview](/images/006_access_control_overview.svg)
 *Soruce: kubernetes.io*
 
 The first step is authentication, where a request needs to go through any authentication module that has been configured. At the authorization step, the request will be checked against existing policies. It will be authorized if the user has the permissions to perform requested actions. Then the request will go through the last step of admission controllers. In general admission controllers will check the actual content of the objects being created and validate them before admitting the request.
