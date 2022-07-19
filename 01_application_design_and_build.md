@@ -390,5 +390,5 @@ While they can be seen as a way to do batch processing in k8s, they can also be 
 
 Cronjobs work in a similar manner to Linux jobs, with the same time syntax. The **CronJob** operator creates a **Job** operator at some point during the configured minute. Depending on the duration of the pods a Job runs, there are cases where a job would not be run during a time period or could  run twice; as a result, the requestd Pod should be idempotent.
 
-An option `spec` field is `.spec.soncurrencyPolicy` which determines how to handle existing jobs, should the time segment expire. If set to `Allow`, the default, another concurrent job will be rin and twice as many pods would be running. If set to `Forbid`, the current job continues and the new job is skipped. A value of `Replace` cancels the current job and the controlled pods, and starts a new job in its place.
+An option `spec` field is `.spec.concurrencyPolicy` which determines how to handle existing jobs, should the time segment expire. If set to `Allow`, the default, another concurrent job will be rin and twice as many pods would be running. If set to `Forbid`, the current job continues and the new job is skipped. A value of `Replace` cancels the current job and the controlled pods, and starts a new job in its place.
 
