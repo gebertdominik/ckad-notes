@@ -470,3 +470,22 @@ spec:
     persistentVolumeClaim:
       claimName: pvc-one
 ...
+
+```
+
+#### View the update history of the deployment
+`k rollout history deployment deploymentName`
+
+#### Compare two deployment revisions
+```
+k rollout history deployment deploymentName --revision=1 > one.out
+k rollout history deployment deploymentName --revision=2 > two.out
+diff one.out two.out
+```
+
+#### Verify what would be undone while undoing the rollout(show the template prior to using it)
+`kubectl rollout undo --dry-run=client deployment/deploymentName`
+
+#### Undo rollout to specific revision
+`kubectl rollout undo deployment deploymentName --to-revision=1`
+
