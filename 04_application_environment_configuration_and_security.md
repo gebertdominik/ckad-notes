@@ -299,3 +299,49 @@ Here is a short summary of the RBAC process, typically done by the cluster admin
 * Verify the user has limited access.
 
 ## Admission Controller
+
+Admissions controllers can access the conent of the objects being created by the requests. They can modify content, validate it, and potentially deny request.
+
+Admission controllers are needed for cenrtain features to work properly. Controllers have been added as K8s matured. Started with 1.13.1 release of the `kube-apiserver`, the admission controllers are now compiled into the binary, instead of a list passed during execution. To enable or disable, we can pass the following options, changing out the plugins we want to enable or disable:
+
+* `--enable-admission-plugins=NamespaceLifecycle,LimitRanger`
+* `--disable-admission-plugins=PodNodeSelector`
+
+Controllers becoming more common are `MutatingAdmissionWebhook` and `ValidatingAdmissionWebhook` which will allow the dynamic modification of the API request, providing greater flexibility. These calls reference an exterior service, such as OPA, and wait for a return API call. Each admission controller functionality is explained in the [documentation](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/).
+
+## Security Contexts
+
+Pods and containers can be given security constraints to limit what processes running in the containers can do(for example we can limit the Linux capabilities).
+
+**Clusters instaling using kubeadm allow pods any possible elevation in privilege by default.** For example a pod could control the nodes networking config, override root etc. These abilities are almost always limited by cluster administrators.
+
+This security limitation is called a security context. It can be defined for the entire pod, or for each container.
+
+For example, if we want to enforce policy taht containters cannot run their process as the root user, we can add a pod security context like:
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  securityContext:
+    runAsNonRoot: true
+  containers:
+  - image: nginx
+    name: nginx
+```
+
+Then when we create this Pod, we will see a warning that the container is trying to rut as root, which is not allowed. Hence, the pod will never run:
+
+```
+$ kubectl get pods
+NAME   READY  STATUS                                                 RESTARTS  AGE
+nginx  0/1    container has runAsNonRoot and image will run as root  0         10s
+```
+
+> **Note**
+>
+>More info about Security Contexts can be found in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
+
+## Pod Security Policies (PSPs)
