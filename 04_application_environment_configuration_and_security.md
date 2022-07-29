@@ -345,3 +345,167 @@ nginx  0/1    container has runAsNonRoot and image will run as root  0         1
 >More info about Security Contexts can be found in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
 
 ## Pod Security Policies (PSPs)
+
+> **Warning**
+>
+> Pod Security Policies are deprecated due to usability issues and confusion, but still in common usage. More about this can be found in the [PodSecurityPolicy Deprecation](https://kubernetes.io/blog/2021/04/06/podsecuritypolicy-deprecation-past-present-and-future/) blog post.
+
+To automate the enforcement of security contexts, we can define `PodSecurityPolicies(PSP)`. A PSP is defined via a standard k8s manifest following the PSP API Schema.
+
+These policies are cluster-level rules that govern what pod can do, what they can access, what user they run as, etc.
+
+For instance, if we don't want any of the containers in our cluster to run as the root user, we can define a PSP to that effect.
+
+While PSP has been helpful, there are other methods gaining popularity. The [Open Policy Agent(OPA)](https://www.openpolicyagent.org/), provides a unified set of tools and policy framework. This allows a single point of configuration for all of our cloud dependencies.
+
+OPA can be deployed as an admission controller inside of K8s, which allows OPA to enforce or mutate requests as they are received. Using the OPA Gatekeeper it can be deployed using Custom Resource Definitions.
+
+An example of PSP:
+
+```
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: restricted
+spec:
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  runAsUser:
+    rule: MustRunAsNonRoot
+  fsGroup:
+    rule: RunAsAny
+```
+
+For Pod Security Policies to be enabled, we need to configure the admission controller of the controller-manager to contain `PodSecurityPolicy`. These policies make even more sense when coupled with the RBAC configuration in our cluster. This will allow os to finely tune what our users are allowed to run and what capabilities and low level privileges their containers will have.
+
+## Pod Security Standards
+
+There ae 3 policies to limit what a pod is allowed to do. Those policies are cumulative. The namespace is given the appropriate label for each policy. New pods will then be restricted. Existing pods would not be changed by an edit to the namespace.
+
+> **Note**
+>
+>Details can be found in [Kubernetes documentation](https://kubernetes.io/docs/concepts/security/pod-security-standards/#privileged)
+
+### Privileged
+
+No restrictions from this policy.
+
+```
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: no-restrictions-namespace
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: latest
+```
+
+### Baseline
+
+Minimal restrictions. Does not allow known privilege escalations.
+
+```
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: baseline-namespace
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/warn-version: latest
+```
+
+### Restricted
+
+Most restricted policy. Follows current pod hardening best practicies.
+
+```
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: my-restricted-namespace
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+```
+
+## Network Security Polcies
+
+Network Security Polcies are usually set up by administrators. Anyway it's stil important to understand how they work and could prevent our microservices from communicating with each other or outside the cluster.
+
+By default, all pods can reach each other. All ingress and egress traffic is allowed. this has been a high-level networking requirement in K8s. However, notwork isolation can be configured and traffic to pods can be blocked. In newer version of k8s, egress traffic can also be blocked. This is done by configuring `NetworkPolicy`. As all traffic is allowed, we may want to implement a policy that drops all traffic, then, other policies which allow desired ingress and egress trafic.
+
+The `spec` of the policy can narrow down the effect to a particular namespace, which can be handy. Further settings include a `podSelector`, or label, to narrow down which Pods are affected. Further ingress and egress settings declare traffic to and from IP addresses and ports.
+
+Not all network providers support `NetworkPolicies` kind. A non-exhaustive list of providers with support includes Calico, ROmana, Cilium, Kube-router and WeaveNet.
+
+In previous versions of K8s, therewas a requirement to annotate a namespace as part of network isolation, specifically the `net.beta.kubernetes.io/network-policy=value`. Some network plugins may still require this setting.
+
+The use of policies has become stable, noted with the `v1` `apiVersion`. The example below narrows down the policy to affect the default namespace.
+
+Only Pods with the label of `role: db` will be affected by this policy, and the policy has both Ingress and Egress settings.
+
+The `ingress` setting includes a `172.17` network, with a smaller range of `171.17.1.0` IPs being excluded from this traffic.
+
+```
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ingress-egress-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: db
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - ipBlock:
+        cidr: 172.17.0.0/16
+        except:
+        - 172.17.1.0/24
+  - namespaceSelector:
+      matchLabels:
+        project: myproject
+  - podSelector:
+      matchLabels:
+        role: frontend
+  ports:
+  - protocol: TCP
+    port: 6379
+egress:
+- to:
+  - ipBlock:
+      cidr: 10.0.0.0/24
+  ports:
+  - protocol: TCP
+    port: 5978
+```
+
+These rules change the namespace for the following settings to be labeled `project: myproject`. The affected Pods also would need to match the label `role: frontend`. Finally, TCP traffic on port 6379 would be allowed from these Pods.
+
+The egress rule have the `to` settings, in this case the `10.0.0.0/24` range TCP traffic to port 5978.
+
+The use of empty ingress or egress rules denies all type of traffic for the included Pods, through this is not suggested. Use another dedicated `NetworkPolicy` instead.
+
+> **Note**
+>
+> There can also be complex `matchExpressions` statements in the spec, but this may change as `NetworkPolicy` matures.
+>```
+>podSelector:
+>  matchExpressions:
+>    - {key: inns, operator: In, values: ["yes"]}
+>```
+
+> **Note**
+>
+> More network policies, can be found on [Github](https://github.com/ahmetb/kubernetes-network-policy-recipes)
+
+### Default Policy Example
