@@ -509,3 +509,34 @@ The use of empty ingress or egress rules denies all type of traffic for the incl
 > More network policies, can be found on [Github](https://github.com/ahmetb/kubernetes-network-policy-recipes)
 
 ### Default Policy Example
+
+The empty braces will match all Pods not selected by other `NetworkPolicy` and will not allow ingress traffic. Egress traffic would be unaffected by this policy:
+
+```
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+```
+
+With the potential for complex ingress and egress rules, it may be helpful to create multiple objects which include simple isolation rules and use easy to understand names and labels.
+
+Some network plugins, such as WeaveNet, may requiree annottation of the Namespace. The following shows the setting of a `DefaultDeny` for the `myns` namespace:
+
+```
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: myns
+  annotations:
+    net.beta.kubernetes.io/network-policy: |
+     {
+        "ingress": {
+          "isolation": "DefaultDeny"
+        }
+     }
+```
