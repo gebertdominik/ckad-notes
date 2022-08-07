@@ -99,9 +99,58 @@ spec:
   - name: "443"
     port: 443
     protocol: TCP
-    targetPort: 443
+    targetPort: 443 
 ```
 
 ## NodePort
 
-NodePort is a si v
+NodePort is a simple connection from a high-port router to a ClusterIP using iptables, or ipvs in newer versions. The creation of a NodePort generated a ClusterIP by default. Traffic is routed from the NodePort to the ClusterIP. Only high ports can be used, as declared in the source code. the NodePOrt is accessible via calls to `<NodeIP>:<NodePort>`.
+
+```
+spec:
+  clusterIP: 10.97.191.46
+  externalTrafficPolicy: Cluster
+  ports:
+  - nodePort: 31070
+    port: 80
+    protocol: TCP
+    targetPort: 800a0
+  selector:
+    io.kompose.service: nginx
+  sessionAffinity: None
+  type: NodePort
+ ```
+
+## LoadBalancer
+
+Creating a `LoadBalancer` service generates a `NodePort`, which creates a `ClusterIP`. It also sends an asynchronous call to an external load balancer, typically supplied by a cloud provider. The `External-IP` value will remain in a `<Pending>` state until the load balancer returns. Should it not return, the `NodePort` created acts as it would be otherwise.
+
+```
+Type: LoadBalancer
+loadBalancerIP: 12.45.105.12
+clusterIP: 10.5.31.33
+ports:
+- protocol: TCP
+  Port: 80
+```
+
+The routing of traffic to a particular backend pod depends on the cloud provider in use.
+
+## ExternalName
+
+The use of `ExternalName` service, which is a special type of service without selectors, is to point to an external DNS server. Use of the service returns a `CNAME` record. Working with the `ExternalName` service is handy when using a resource external to the cluster, perhaps prior to full integration.
+
+```
+spec:
+  Type: ExternalName
+  externalName: ext.db.example.com
+```
+
+## Ingress Resource
+
+An ingress resource is an API object containing a list of rules matched against all incoming requests. Only HTTP rules are currently supported. In order for the container to direct traffic to the backends, the HTTP request must match both the host and the path declared in the ingress.
+
+## Ingress Controller
+
+
+
