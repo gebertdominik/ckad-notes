@@ -162,3 +162,19 @@ Ingress Controller vs Multiple NodePorts:
 
 ## Service Mesh
 
+For More complex connections or resources such as service discovery, rate limiting, traffic management and advanced metrics, we may want to implement service mesh.
+
+A service mesh consists of edge and embedded proxies communicating with each other and handling traffic based on rules from a control plane. Various options are available, for example:
+
+* [**Envoy**](https://www.envoyproxy.io/) - it's a modular and extensible proxy favored due to modular construction, open architecture and dedication to remaining unmonetized. Often used as a data plane under other tools for a service mesh.
+* [**Istio**](https://istio.io/) - it's a powerful tool set which leverages Envoy proxies via a multi-component control plane. Built to be platform independent it can be used to make the service mesh flexible and feature filled.
+* [**Linkerd**](https://linkerd.io/) -  it's another service mesh purpose built to be easy to deploy, fast, and ultralight.
+
+A service mesh can be deployed in several different ways, just as the rest of Kubernetes. Here is an example of one way Linkerd may be deployed(from linkerd.io website) and a possible example of Istio.
+
+![Linkerd Service Mesh](images/009_linkerd_service_mesh_diagram.png)
+
+Example of Istio Service Mesh:
+
+![Istio Service Mesh](images/010_example_of_istio_service_mesh.png)
+
