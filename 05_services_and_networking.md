@@ -158,7 +158,7 @@ There are several ingress controllers such as **nginx** used everywhere, and GCE
 
 Ingress Controller vs Multiple NodePorts:
 
-[Ingress Controller vs Multiple NodePorts](008_ingress_controller_vs_multiple_nodeports.png)
+![Ingress Controller vs Multiple NodePorts](images/008_ingress_controller_vs_multiple_nodeports.png)
 
 ## Service Mesh
 
