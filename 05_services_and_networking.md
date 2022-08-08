@@ -152,5 +152,13 @@ An ingress resource is an API object containing a list of rules matched against 
 
 ## Ingress Controller
 
+Handling a few requestscan be easily done. However, managing thousands or tens of thousands of services can create inefficiencies. The use of an ingress controller manages ingress rules to route traffic to existing services. Ingress can be used for fan out to services, name-based hosting, TLS, or load balancing. As a security has become more of a concern, ingress controller pods are no longer given access to low-numbered ports. Instead the assumption is a single high-numbered port, with an external load balancer in use to provide typical low-numbered ports.
 
+There are several ingress controllers such as **nginx** used everywhere, and GCE embedded into a cloud provider. **Traefik** and **HAProxy** are in common use as well. More controllers are available, as is support for more HTTPS/TLS modes, combining L4 and L7 ingress and requesting name or IP via claims. General searching or looking at [Artifact Hub](https://artifacthub.io/) for Helm charts can be useful.
+
+Ingress Controller vs Multiple NodePorts:
+
+[Ingress Controller vs Multiple NodePorts](008_ingress_controller_vs_multiple_nodeports.png)
+
+## Service Mesh
 
