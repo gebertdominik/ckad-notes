@@ -113,3 +113,98 @@ View the details of the pod and the status of the containers using the  `kubectl
 Should the reported information not indicate the issue, the next step would be to view any logs of the container, in case there is a misconfiguration or missing resource unknown to the cluster, but requireed by the application. These logs can be seen with the `kubectl logs <pod-name> <container-name>` command.
 
 ## Basic Troubleshooting Flow: Node and Security
+
+Security settings can also be a challenge. RBAC provides mandatory or discretionary access control in granular manner. SELinux and AppArmor are also common issues, especially with network-centric applications.
+
+Disabling security for testing would be a common response to an issue. Each tool has its own logs and indications of rule violation. There could be multiple issues to troubleshoot, so we need to be sure to re-enable security and test the workload again.
+
+Internode networking can also be an issue. Changes to switches, routes, or other network settings can adversely affect K8s. Historically, the primary causes were DNS and firewalls. As K8s integrations have become more common and DNS integration is maturing, this has become less of an issue. Still, check connectivity for recent infrastructure changes as part of our troubleshooting process. Every so often, an update which was said shouldn't cause an issue may, in fact, be causing an issue :)
+
+## Basic Troubleshooting Flow: Agents
+
+The issues found with a decoupled system like Kubernetes are similar to those of a traditional datacenter, plus the added layers of K8s controllers:
+
+* Control pods in pending or error state,
+* Look for errors in log files
+* Are there enough resources?
+* etc.
+
+## Monitoring
+
+Monitoring is about collecting metrics from the infrastructure, as well as applications.
+Prometheus is part of the CNCF. As a K8s plugin, it allows one to scrape resource usage metrics from Kubernetes objects across the entire cluster. It also has several client libraries which allow us to instrument our application code in order to collect application level metrics.
+
+Collecting metrics is the first step, making use of the data collected is next. We have the ability to expose lots of data points. Graphing the data with a tool like Grafana can allow for visual understanding of the cluster nad application status. 
+
+![grafana_dashboard](images/011_grafana_dashboard.png)
+
+## Logging Tools
+
+Typically, logs are collected locally and aggregated before being ingested by a search engine and displayed via a dashboard. While there are many softwware stacks, the Elasticsearch, Logstash, and Kibana Stack has become quite common.
+
+In Kubernetes, the `kubelet` writes container logs to local files (via the Docker logging driver). The `kubectl logs` command allows us to retrieve these logs.
+
+Cluster-wide, we can use `Fluentd` to aggregate logs. 
+
+> **Note**
+>Detailed logging concepts description can be found [here](https://kubernetes.io/docs/concepts/cluster-administration/logging/).
+
+Setting up FluendT for K8s logging is a good exercise in undestading DaemonSets. Fluentd agents run on each node via a DaemonSet, they aggregate the logs and feed them to an Elasticsearch instance prior to visualizaiton in a Kibana dashboard.
+
+## Monitoring Applications
+
+As a distributed system, Kubernetes lacks monitoring and tracing tools which are cluster-aware. Other CNCF projects have started to handle various areas. As they are independent projects, we may find they have some overlap in capability. Some of them are:
+
+* [Prometheus](https://prometheus.io/) focuses on metrics and alerting. Provides a time-series database, queries and alerts to gather information and alerts for the entire cluster. With integration with Grafana, as well as simple graphs and console templates, we can easily visualize the cluster condition graphically.
+* [Fluentd](https://www.fluentd.org/) is a unified logging layer which can collect logs from over 500 plugins and deliver to a multitude of outputs. A single, enterprise-wide tool to filter, buffer, and route messages just about anywhere we may want.
+* [OpenTracing](https://opentracing.io/) project seems to provie worthwile instrumentation to propagate tracing among all services, code an packages, so the trace can be complete. Its goal is a "single, standard mechanism" for everything.
+* [Jaeger](https://www.jaegertracing.io/) tracing system developed by Uber, focused on distributed context propagation, transaction monitoring, and root cause analysis, among other features. This has become a common tracing implementation of OpenTracing.
+
+## System and Agent Logs
+
+Where system and agent files are found depends on the existence of systemd. Those with systemd will log to journalctl, which can be viewed with `journalctl -a`. Unless the `var/log/journal` directory exists, the journal is volatile. As K8s can generate a lot of logs, it would be advisable to configure log rotation, should this directory be created.
+
+Without systemd, the logs will be created under `/var/log/<agent>.log`, in which case it would also be advisable to configure log rotation.
+
+Container components:
+
+* kube-scheduler
+* kube-proxy
+
+Non-container components:
+
+* kubelet
+* Docker
+* etc.
+
+## Conformance Testing
+
+The flexibility of Kubernetes can lead to the development of non-confirming cluster:
+
+* meet the demands of our environment
+* several vendor-provided tools for confirmance testing
+* For ease of use, `Sonobuoy by Heptio` can be used to understand the state of the cluster.
+
+With more than 60 known distributions, there is a challenge to consistency and portability. In late 2017, a new program was started by CNCF to certify distributions that meet essential requirements and adhere to complete API functionality:
+
+* Confidence that workloads from one distribution work on others
+* Guarantees complete API functions
+* Testing and Architecture Special Interest Groups
+
+We can find more about [submitting conformance results](https://github.com/cncf/k8s-conformance/blob/master/instructions.md) on Github
+
+
+## More resources
+
+Official docs:
+
+* [Troubleshooting](https://kubernetes.io/docs/tasks/debug-application-cluster/troubleshooting/)
+* [Troubleshooting Applications](https://kubernetes.io/docs/tasks/debug/debug-application/debug-pods/)
+* [Troubleshoot Cluster](https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/)
+* [Debug Pods and ReplicationControllers](https://kubernetes.io/docs/tasks/debug-application-cluster/debug-pod-replication-controller/)
+* [Debug Services](https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/)
+
+Others:
+
+* [Kubernetes Github resources for issues and bug tracking](https://github.com/kubernetes/kubernetes/issues)
+* [Kubernetes Slack channel](https://kubernetes.slack.com/)
