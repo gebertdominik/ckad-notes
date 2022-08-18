@@ -12,6 +12,12 @@ set expandtab
 set tabstop=2
 set shiftwidth=2
 ```
+Explanation:
+* `expandtab` - use spaces for tab
+* `tabstop` - how many spaces used for tab
+* `shiftwidth` - how many spaces are used for indentation
+
+
 ## Useful links
 
 * [Curriculum](https://github.com/cncf/curriculum)
