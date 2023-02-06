@@ -51,13 +51,26 @@ Each node in the cluster runs two containers:
 * kubelet, which receives spec information for container configuration, downloads and manages any resources and works with the container engine on the local node to ensure the container runs or is restarted upon failure.
 * kube-proxy, creates and manages local firewall rules and networking configuration to expose containers on the network.
 
-Containers in k8s are not managed individually - they are part of a **Pod**. A Pod consists at least one container. They are all share an IP address, namespace and storage. Typically one container in a Pod runs an application while other containers support the primary application.
+Containers in k8s are not managed individually - they are part of a **Pod**. 
 
-Orchestration is managed through **operators** and **controllers**. Each operator uses the kube-apiserver for a particular object state, modifying the object until the declared state matches the current status.
+A Pod consists at least one container. Containes in a pod share with each other:
+
+* an IP address,
+* namespace,
+* storage.
+
+Typically one container in a Pod runs an application while other containers support the primary application.
+
+Orchestration is managed through **operators** and **controllers**. Each operator uses the **kube-apiserver** for a particular object state, modifying the object until the declared state matches the current status.
 
 The default operator for container is **Deployment**. A Deployment deploys and manages a different operator called **ReplicaSet** A ReplicaSet is an operator which deploys multiple pods, each with the same spec information. These are called **replicas**.
 
-The Kubernetes architecture is made up of many operators such as **Jobs** and **CronJobs** to handle single or recurring tasks, or custom resource definitions and purpose-built operators.
+The Kubernetes architecture is made up of many operators such as:
+
+*  **Jobs** - to handle single tesk
+*  **CronJobs**  - to handle recurring tasks
+*  custom resource definitions,
+*  purpose-built operators.
 
 Kubernetes probides several API objects which can be used to deploy pods, other than just ensuring a certain number of replicas is running somewhere.
 
@@ -65,18 +78,42 @@ A **DeamonSet** can be used to ensure that a single pod is deployed on every nod
 
 A **StatefulSet** can be used to deploy pods in a particular order, such that following pods are deployed only if previous pod reports a ready status. It can be used for legacy applications which are not cloud-friendly.
 
-To make cluster management easier, we can use **labels** - strings which become part of the object metadata. They can be use when selecting objects, when don't know the pod name. Nodes can have **taints**, and arbitrary string in the node metadata, to inform the scheduler on Pod assignments used along with toleration in Pod metadata, indicating it should be scheduled on a node with the particular taint.
+To make cluster management easier, we can use **labels** - strings which become part of the object metadata. They can be use when selecting objects, when don't know the pod name. 
+
+Nodes can have **taints**, and arbitrary string in the node metadata, to inform the scheduler on Pod assignments used along with toleration in Pod metadata, indicating it should be scheduled on a node with the particular taint.
 
 There is also space in metadata for **annotations**, which remain with the object, but cannot be used as a selector. However, they could be leveraged by other objects or Pods.
 
 Often multiple users and teams share access to one or more clusters. This is referred as MULTI-TENANCY. Some form of isolation is necessary in this case. It can be achieved by using:
 
-* namespace - a segregation of resources, upon witch resource quotas and permissions can be applied. K8s objects may be created in a namespace or cluster-scoped. Users can be limited by the object verbs allowed per namespace. Also **LimitRange** admission controller constraints resource usage in that namespace. Two objects cannot have the same name in the same namespace.
-* context - combination of user, cluster name and namespace. A convinient way to switch between combinations of permissions and restrictions. This information is referenced from `~/.kube/config`
-* Resource Limits - a way to limit the amount of resources consumed by a pod or to request a minimum amount of resources reserved but not necessarily consumed by a pod. Limits can also be set per-namespaces, which have priority over those in the PodSpec
-* Pod Security Policies - Deprecated. It was a policy to limit the ability of pods to elevate permissions or modify the node upon which they are scheduled. This wide-ranging limitation may prevent apod from operating properly. This was replaced with Pod Security Admission. Some have gone towards Open Policy Agent, or other tools instead.
-* Pod Security Admission - a beta feature to restrict pod behaviour in an easy-to-implement and easy-to-understand manner, applied at the namespace level when a pod is created. These will leverage three profiles: Privilaged, Baseline, and Restricted policies.
-* Network Policies - the ability to have an inside-the cluster firewall. Ingress and Egress traffic can be limited according to namespaces and labels as well as typical network traffic characteristics.
+* Namespace 
+	- a segregation of resources, upon witch resource quotas and permissions can be applied.
+	- K8s objects may be created in a namespace or cluster-scoped. 
+	- Users can be limited by the object verbs allowed per namespace. 
+	- Also **LimitRange** admission controller constraints resource usage in that namespace. 
+	- Two objects cannot have the same name in the same namespace.
+* Context 
+	- combination of user, cluster name and namespace.
+	- a convinient way to switch between combinations of permissions and restrictions. 
+	- This information is referenced from `~/.kube/config`.
+* Resource Limits 
+	- a way to limit resources consumed by a pod.
+	- a way to limit minimum amount of resources reserved by a pod. 
+	- Limits can also be set per-namespaces, which have priority over those in the PodSpec.
+* Pod Security Admission 
+	- a beta feature to restrict pod behaviour in an easy-to-implement and easy-to-understand manner.
+	- applied at the namespace level when a pod is created. 
+	- These will leverage three profiles: Privilaged, Baseline, and Restricted policies.
+* Network Policies
+	- the ability to have an inside-the cluster firewall. 
+	- Ingress and Egress traffic can be limited according to namespaces and labels as well as typical network traffic characteristics.
+* Pod Security Policies 
+ - **Deprecated**
+ - It was a policy to limit the ability of pods to elevate permissions or modify the node upon which they are scheduled. 
+ - This wide-ranging limitation may prevent apod from operating properly. 
+ - This was replaced with Pod Security Admission. 
+ - Some have gone towards Open Policy Agent, or other tools instead.
+
 
 ## Control Plane Nodes
 
@@ -86,7 +123,7 @@ K8s master runs various server and manager processes for the cluster. Among the 
 * the kube-scheduler,
 * the etcd database.
 
-As the software has matured, new components have been created to handle dedicated needs, such as the cloud-controller-manager. It handles tasks, once handled by the kube-controller-manager, to interact with other tools such as Rancher or DigitalOcean for third-party cluster management and reporting.
+As the software has matured, new components have been created to handle dedicated needs, such as the **cloud-controller-manager**. It handles tasks, to interact with other tools such as Rancher or DigitalOcean for third-party cluster management and reporting.
 
 There are several add-ons which have become essential to a typical production cluster, such as DNS services. Others are third-party solutions where K8s has not yet developed a local component, such as cluster-level logging and resource monitoring.
 
@@ -123,13 +160,16 @@ One of the first configurations referenced during creation is if the Pod can be 
 > 
 > Simultaneous requests to update a particular value all travel via the kube-apiserver, which then passes along the request to etcd in a series. The first request would update the database. The second request would no longer have the same version number as found in the object, in which case the kube-apiserver would reply with an error 409 to the requester.
 
-There is a cp database along with possible followers. They communicate with each other on an ongoing basis to determine which will be master, and determine another in the event of failure. While very fast and potentially durable, there have been some hiccups with some features like whole cluster upgrades. The kubeadm cluster creation tool allows easy deployment of a multi-master cluster with stacked etcd or an external database cluster.
+There is a "control plane" database along with possible followers. They communicate with each other on an ongoing basis to determine which will be master, and determine another in the event of failure. While very fast and potentially durable, there have been some hiccups with some features like whole cluster upgrades. The kubeadm cluster creation tool allows easy deployment of a multi-master cluster with stacked etcd or an external database cluster.
 
 #### Other agents
 
-The kube-controller-manager is a core control loop deamon which interacts with the kube-apiserver to determine the state of the clister. If the state doesn't match, the manager will contact the necessary controller to match the desired state. There are several controllers in use, such as endpoints, namespace, and replication.
+The kube-controller-manager: 
+* is a core control loop deamon which interacts with the kube-apiserver to determine the state of the cluster.
+* if the state doesn't match, the manager will contact the necessary controller to match the desired state.
+* There are several controllers in use, such as endpoints, namespace, and replication.
 
-Remaining in beta as of v1.16, the cloud-controller-manager interacts with agents outside of the cloud. It handles tasks once handled by kube-controller-manager. This allows faster changes withiut altering the core k8s controll process. Each kubelet must use the `--cloud-provider-external` settings passed to the binary.
+Remaining in beta as of v1.16, the cloud-controller-manager interacts with agents outside of the cloud. It handles tasks once handled by kube-controller-manager. This allows faster changes without altering the core k8s controll process. Each kubelet must use the `--cloud-provider-external` settings passed to the binary.
 
 ## Worker nodes
 
@@ -141,11 +181,20 @@ All worker nodes run:
 
 Also other management deamons are deployed to watch these agents or provide various services.
 
-The kubelet interacts with container engine installed on all the nodes, and makes sure that the containers that need to run are actually running. The kubelet agent is the heavy lifter for changes and configuration on worker nodes. It accepts API calls for Pod specifications (a PodSpec is a JSON or YAML file that describes a Pod). 
+**kubelet** 
 
-Should a Pod require access to storage, Secrets or ConfigMaps, the kubelet will ensure access or creation. It also sends back status to the kube-apiserver for eventual persistence.
+* interacts with container engine installed on all the nodes,
+* makes sure that the containers that need to run are actually running
+* The kubelet agent is the heavy lifter for changes and configuration on worker nodes.
+* accepts API calls for Pod specifications (a PodSpec is a JSON or YAML file). 
+* Should a Pod require access to storage, Secrets or ConfigMaps, the kubelet will ensure access or creation
+* sends back status to the kube-apiserver for eventual persistence.
 
-The kube-proxy is in charge of managing the network connectivity to the containers. It does so through the use of iptables entries. It also has the userspace mode, in which it monitors Services and Endpoints using a random high-number port to proxy traffic. Use ipvs can be enabled with the expectation it will become the default, replacing iptables.
+**kube-proxy** 
+
+* is in charge of managing the network connectivity to the containers.It does so through the use of iptables entries. 
+* has the userspace mode, in which it monitors Services and Endpoints using a random high-number port to proxy traffic. 
+* Use of ipvs can be enabled with the expectation it will become the default, replacing iptables.
 
 K8s doesnt have cluster-wide logging yet. Instead, another CNCF project is used, called **Fluentd**. When implemented, it provides a unified logging layer for the cluster, which filters, buffers, and routes messages.
 
@@ -153,9 +202,11 @@ For cluster-wide metrics, **Prometheus** is often deployed to gather metrics fro
 
 ## Pods
 
-**Pod** is the smallert unit we can work with. It can contain multiple containers. Due to shared resources, the design of a Pod typically follows one-process-per-container architecture.
+* is the smallert unit we can work with. 
+* It can contain multiple containers. 
+* Due to shared resources, the design of a Pod typically follows one-process-per-container architecture.
 
-It's not possible to determine which container becomes avaliable first inside a Pod. Containers are started in parallel. We can use `initContainers` to ensure some containers are ready before others in a pod. To support a single process running in container, we may need logging, a proxy, or special adapter. These tasks are often handled by other containers in the same Pod. There is only one IP address per Pod with most netwirk plugins.
+It's not possible to determine which container becomes avaliable first inside a Pod. Containers are started in parallel. We can use `initContainers` to ensure some containers are ready before others in a pod. To support a single process running in container, we may need logging, a proxy, or special adapter. These tasks are often handled by other containers in the same Pod. There is only one IP address per Pod with most network plugins.
 
 A common reason to have multiple containers in a Pod is logging. The term **"Sidecar"** is used to describe a container dedicated to performing a helper task, like handling logs and responding to requests, as the primary container may not have this ability.
 
@@ -176,14 +227,12 @@ Other objects will be created by operators/watch-loops to ensure the specificati
 
 ## Services
 
-With every object and agent decoupled we need a flexible and scalable operator which connects resources together and will reconnect, should something die and a replacement is spawned. Each Service is a microservice handling a particular bit of traffic, such as a single **NodePort** or a **LoadBalancer** to distribute inbound requests among many Pods.
-
-A Service also handles access policies for inbound requests, useful for resource control and security.
-
-A service, as well as `kubectl`, uses a **selector** in order to know which objects to connect. There are two selectors currently supported:
-
-* equality-based - can be used as `=`, `==` and `!=`
-* set-based - `in`, `notin` and `exists`
+* we need a flexible and scalable operator which connects resources together and will reconnect, should something die and a replacement is spawned
+* Each Service is a microservice handling a particular bit of traffic, such as a single **NodePort** or a **LoadBalancer** to distribute inbound requests among many Pods.
+* handles access policies for inbound requests, useful for resource control and security.
+* as well as `kubectl`, uses a **selector** in order to know which objects to connect. There are two selectors currently supported:
+	- equality-based - can be used as `=`, `==` and `!=`
+	- set-based - `in`, `notin` and `exists`
 
 ## Operators (also known as watch-loops/controllers)
 
