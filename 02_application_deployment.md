@@ -21,15 +21,35 @@
 
 ## Volumes
 
-Containers engines have traditionally not offered stoarage that outlives container. A K8s volume shares at least the Pod lifetime, not the containers within. Should a container terminate, the data would continue to be available to the new container. A volume can persist longer than a Pod, and can be accessed by multiple Pods using **PersistentVolumeClaims**. This allows for state persistency.
+* A volume is a directory made avaliable to containers in a Pod
+* As of 1.14, there were 28 different volume type
+* Traditionally container engines do not offered storage that outlives container.
+* k8s volumes live at least the same time as Pod(not the containers).
+* If data should be persisted for longer period, we need to use **PersistentVolumeClaims**. This allows for state persistency.
+* If we want our storage lifetime to be distinct from a Pod, we can use **Persistent Volumes**. These allow for empty or pre-populated volumes to be claimed by a Pod using a Persistent Volume Claim, then outlive the Pod.
 
-A volume is a directory made avaliable to containers in a Pod. As of 1.14, there were 28 different volume types ranging from `rbd` for Ceph, to `NFS`, to dynamic volumes from a cloud provider like Google's `gcePersistentDisk`. Each has particular configuration options and dependencies.
 
-Should we want our storage lifetime to be distinct from a Pod, we can use Persistent Volumes. These allow for empty or pre-populated volumes to be claimed by a Pod using a Persistent Volume Claim, then outlive the Pod.
 
-There are two API Objects which exists to provide data to a Pod already. Encoded data can be passed using a Secret and non-encoded data can be passed with a **ConfigMap**. These can be used to pass important data like SSH keys, passwords, or even a config gile like `etc/hosts`.
+There are two API Objects which exists to provide data to a Pod already:
 
-We should be aware that any capacity mentioned does not represent an actual limit on the amount of space a container can consume. Should a volume have a capacity of 10G, that does not mean there is 10G of backend storage available. If there is more and an application were to continue to write it, there is no block on how much space is used, with the possibleexception of a newer limit on ephemeral storage usage. A new CSI driver has become available, so at least we can track actual usage.
+* Encoded data can be passed using a Secret 
+
+* non-encoded data can be passed with a **ConfigMap**. 
+
+  
+
+These can be used to pass important data like SSH keys, passwords, or even a config gile like `etc/hosts`.
+
+
+
+If we define a volume with declared capacity 5G(5Gigabytes):
+
+* It doesn't mean the container can cosume 5G of data.
+* It doesn' mean there is 5G available
+* If there is more data available, application can continue to write it - there is no block on how much space is used.
+* A new CSI driver has become available, so at least we can track actual usage.
+
+
 
 ### Volume Spec
 
@@ -57,45 +77,26 @@ spec:
 
 ```
 
-The YAML file above would create a Pod with a single container with a volume named `scratch-volume` created, which would create the `/scratch` directory inside the container.
+The YAML file above:
+
+*  would create a Pod with a single container,
+* with a volume named `scratch-volume` created, 
+* which would create the `/scratch` directory inside the container.
+
+
 
 ### Volume Types
 
-#### GCEpersistentDisk and awsElasticBlockStore
-
-In GCE or AWS we can use volumes of type `GCEpersistentDisk` or `awsElasticBlockStore` which allows us to mount GCE and EBS disks in our Pods, assuming we have already set up accounts and privileges.
-
-#### emptyDir and hostPath
-
-`emptyDir` and `hostPath` volumes are easy to use. As mentioned, `emptyDir` is an empty directory that gets erased when the Pod dies, but is recreated when the container restarts. `hostPath` volume mounts a resource from the host node filesystem. The resource could be a directory, file socket, character, or block device. These resources must already exist on the host to be used. There are two types, `DirectoryOrCreate` and `FileOrCreate` which create the resources on the host, and use them if they don't already exist.
-
-#### NFS and iSCSI
-
-`NFS`(Network File System) and `iSCSI`(Internet Small Computer System Interface) are straightforward choices for multiple readers scenarios.
-
-#### rbd, CephFS and GlusterFS
-
-`rbd` for block storage or `CephFS` and `GlusterFS` if available in our k8s cluster, can be a good choice for multiple writer needs
+| **Volume Type**                     | **Description**                                              |
+| ----------------------------------- | ------------------------------------------------------------ |
+| **emptyDir**,                       | `emptyDir` is an empty directory that gets erased when the Pod dies, but is recreated when the container restarts. |
+| **hostPath**                        | `hostPath` volume mounts a resource from the host node filesystem. The resource could be a directory, file socket, character, or block device. These resources must already exist on the host to be used. There are two types, `DirectoryOrCreate` and `FileOrCreate` which create the resources on the host, and use them if they don't already exist. |
+| **NFS**,  **iSCSI**                 | `NFS`(Network File System) and `iSCSI`(Internet Small Computer System Interface) are straightforward choices for multiple readers scenarios. |
+| **rbd**, **CephFS** , **GlusterFS** | `rbd` for block storage or `CephFS` and `GlusterFS` if available in our k8s cluster, can be a good choice for multiple writer needs |
 
 #### Other Volume types
 
-* `azureDisk`
-* `azureFile`
-* `csi`
-* `downwardAPI`
-* `fc` (fibre channel)
-* `flocker`
-* `gitRepo`
-* `local`
-* `projected`
-* `portworxVolume`
-* `quobyte`
-* `scaleIO`
-* `secret`
-* `storageos`
-* `vsphereVolume`
-* `persistentVolumeClaim`
-* ...
+`GCEpersistentDisk`, `azureDisk`, `azureFile`, `csi`, `downwardAPI`, `fc` (fibre channel), `flocker`, `gitRepo`, `local`, `projected`, `portworxVolume`,`quobyte`, `scaleIO`, `secret`, `storageos`, `vsphereVolume`, `persistentVolumeClaim`, ...
 
 ### Shared Volume Example
 
@@ -127,11 +128,13 @@ total 0
 
 ```
 
-We can use `emptyDir` or `hostPath` easily - they don't require any additional setup. Note that one container wrote, and the other container had immediate access to the data. There is nothing to keep the containers from overwriting the other's data. Locking or versioning considerations must be part of the application to avoid corruption.
+`emptyDir` and `hostPath` don't require any additional setup. 
+
+After one container wrote, the other had immediate access to the data. They can overwrite the other's data.
 
 ### Persistent Volumes and Claims
 
-A `PersistentVolume`(PV) is a storage abstraction used to retain data longer than the Pod using it. Pods define a volume of type `PersistentVolumeCLaim`(PVC) with various parameters for size and possibly the type of backend storage known as its `StorageClass`. The cluster then attaches the `PersistentVolume`.
+A `PersistentVolume`(PV) is a storage abstraction used to retain data longer than the Pod using it. Pods define a volume of type `PersistentVolumeClaim`(PVC) with various parameters for size and possibly the type of backend storage known as its `StorageClass`. The cluster then attaches the `PersistentVolume`.
 
 K8s will dynamically use volumes that are available, irrespective of its storage type, allowing claims to any backend storage.
 
@@ -147,29 +150,13 @@ flowchart LR
    Provisioning --> Binding --> Using --> Releasing --> Reclaiming
 ```
 
-#### Provisioning
-
-Provisioning can be from `PersistentVolumes` created in advance by the cluster administrator, or requested from a dynamic source, such as a cloud provider.
-
-#### Binding
-
-Occurs when a control loop on the master notices the `PersistentVolumeClaim`, containing an amount of storage, access request, and optionally, a particular `StorageClass`. The watcher locates a matching `PersistentVolume` or waits for the `StorageClass` provisioner to create one. The `PersistentVolume` must match at least the storage amount requested, but may provide more.
-
-#### Using
-
-This phase begins when the bound volume is mounted for the Pod to use, which continues as long as the Pod requires.
-
-#### Releasing
-
-Releasing is done when the Pod is done with the volume and an API request is sent, deleting the `PersistentVolumeClaim`. The volume remains in the state from when the claim is deleted until available to a new claim. The resient data remains depending on the `persistentVolumeReclaimPolicy`
-
-#### Reclaiming
-
-The reclaim phase has three options:
-
-* **Retain**, which keep the data intact, allowing for an administrator to handle the storage and data.
-* **Delete** tells volume plugin to delete the API object, as well as the storage behind it.
-* The **Recycle** option runs an `rm -rf /mountpoint` and then makes it available to a new claim. With the stability of dynamic provisioning, the Recycle option is planned to be deprecated.
+| **Phase**    | **Description**                                              |
+| ------------ | ------------------------------------------------------------ |
+| Provisioning | Provisioning can be from `PersistentVolumes` created in advance by the cluster administrator, or requested from a dynamic source, such as a cloud provider. |
+| Binding      | Occurs when a control loop on the master notices the `PersistentVolumeClaim`, containing an amount of storage, access request, and optionally, a particular `StorageClass`. The watcher locates a matching `PersistentVolume` or waits for the `StorageClass` provisioner to create one. The `PersistentVolume` must match at least the storage amount requested, but may provide more. |
+| Using        | This phase begins when the bound volume is mounted for the Pod to use, which continues as long as the Pod requires. |
+| Releasing    | Releasing is done when the Pod is done with the volume and an API request is sent, deleting the `PersistentVolumeClaim`. The volume remains in the state from when the claim is deleted until available to a new claim. The resient data remains depending on the `persistentVolumeReclaimPolicy` |
+| Reclaiming   | The reclaim phase has three options: 1. **Retain,** which keep the data intact, allowing for an administrator to handle the storage and data. 2. **Delete**, tells volume plugin to delete the API object, as well as the storage behind it. 3. **Recycle**, runs an `rm -rf /mountpoint` and then makes it available to a new claim. With the stability of dynamic provisioning, the Recycle option is planned to be deprecated. |
 
 ### Persistent Volume
 
