@@ -219,13 +219,13 @@ To support a single process running in the container, we may need logging, a pro
 
 Pods can be generated using a generator, which historically, has changed with each release:
 
-```
+```bash
 kubectl run mypodname --image=apache --generator=run-pod/v1
 ```
 
 Or they can be created/deleted using properly formatted JSON or YAML file:
 
-```
+```bash
 kubectl create -f mypodname.yaml
 kubectl delete -f mypodname.yaml
 ```
@@ -309,7 +309,7 @@ K8s expects the network configuration to enable Pod2Pod. It will not do it for u
 Pods get an IP address assigned prior to application containers being started. 
 
 The service object is used to connect Pods:
- 
+
  * within the network using `ClusterIP` addresses, 
  * from outside of the cluster using `NodePort` addresses, and using a load balancer if configured with a `LoadBalancer` service.
 
@@ -382,7 +382,7 @@ Its aim is to provide a common interface between various networking solutions an
 
 With CNI, we can write a network configuration file:
 
-```
+```yaml
 {
    "cniVersion": "0.2.0",
    "name": "mynet",

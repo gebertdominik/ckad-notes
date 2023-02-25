@@ -119,7 +119,7 @@ spec:
     io.kompose.service: nginx
   sessionAffinity: None
   type: NodePort
- ```
+```
 
 ## LoadBalancer
 

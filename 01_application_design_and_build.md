@@ -119,7 +119,7 @@ Details, conditions, volumes and events for an object can be seen with describe.
 
 `kubectl describe pod test1`
 
-```
+```bash
 ....
 Events:  
   Type    Reason     Age   From               Message  
@@ -203,7 +203,7 @@ If the limites are set to the pod, all usage of the containers is conidered and 
 
 Each millicore is not evaluated, so using more than the limit is possible. The exact amount of overuse is not definite. Note the notation or syntax often found in the documentation:
 
-```
+```yaml
 spec.containers[].resources.limits.cpu
 spec.containers[].resources.requests.cpu
 ```
@@ -219,7 +219,7 @@ The value of CPUs is not relative. It does not matter how many exists, or if oth
 
 With Docker engine, the `limits.memory` value is converted to an integer value and becomes the value to the `docker run --memory <value> <image>` command. The handling of a container which exceeds its memory limit is not definite. It **may be restarted**, or, if it asks for more than the memory request setting, the entire Pod **may be evicted from the node**.
 
-```
+```yaml
 spec.containers[].resources.limits.memory
 spec.containers[].resources.requests.memory
 ```
@@ -228,7 +228,7 @@ spec.containers[].resources.requests.memory
 
 Container files, logs, and EmptyDir storage, as well as k8s cluster data, reside on the root filessystem of the host node. As storage is a limited resource, we may need to manage it as other resources. The scheduler will only choose a node with enough space to meet the sum of all the container requests. Shoud a particular container, or the sum of the containers in a Pod, use more than the limit, **the Pod will be evicted**.
 
-```
+```yaml
 spec.containers[].resources.limits.ephemeral-storage
 spec.containers[].resources.requests.ephemeral-storage
 ```
@@ -253,7 +253,7 @@ The labels, annotations, name and metadata of an object can be found near the to
 
 Which returns for example:
 
-```
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:  
@@ -272,7 +272,7 @@ If we want to select pods with the  `app`  label, we can use  `-l` or `--selecto
 
 ` kubectl -n test get --selector app=object-name pod`
 
-```
+```bash
 NAME                     READY  STATUS   RESTARTS  AGE
 objecgt-name-1234-vtlzd  1/1    Running  0         25m
 ```
@@ -282,7 +282,7 @@ There are several built-in object labels. For example nodes have labels such as 
 
 `kubectl get node worker`
 
-```
+```yaml
 ...
    creationTimestamp: "2020-05-12T14:23:04Z"
    labels:
@@ -297,7 +297,7 @@ There are several built-in object labels. For example nodes have labels such as 
 
 The `nodeselector:` entry in the podspec could use this label to cause a pod to be deployed on a particular node with an entry such as:
 
-```
+```yaml
      spec:
        nodeSelector:
          kubernetes.io/hostname: worker
@@ -339,7 +339,7 @@ Similar to sidecar on a motorcycle, it does not provide the main power, but it d
 
 The use of an `initContainer` allows one or more containers to run only if one or more previous containers run and exit successfully. For example, we could have a checksum verification scan container and a security scan container check the intended containers. Only if both containers pass the checks would the following group of containers be attempted. We can see an example below:
 
-```
+```yaml
 spec:
   containers:
   - name: intended

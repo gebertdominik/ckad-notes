@@ -152,7 +152,7 @@ rules:
   # objects is "secrets"
   resources: ["secrets"]
   verbs: ["get", "watch", "list"]
- ```
+```
 
 #### Bindings
 
@@ -199,7 +199,7 @@ roleRef:
   kind: ClusterRole
   name: secret-reader
   apiGroup: rbac.authorization.k8s.io
- ```
+```
 
  After we create a binding, we cannot change the `Role` or `ClusterRole` that it refers to.
 
@@ -281,7 +281,7 @@ rules:
 - apiGroups: [""]
   resources: ["services", "endpoints", "pods"]
   verbs: ["get", "list", "watch"]
- ```
+```
 
 ### RBAC Process Overview
 

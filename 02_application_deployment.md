@@ -55,7 +55,7 @@ If we define a volume with declared capacity 5G(5Gigabytes):
 
 One of the many types of storage available is an `emptyDir`. The kubelet will create the directory in the container, but not mount any storage. Any data created is written to the shared container space. As a result, it would not be persistent storage. When the Pod is destroyed, the directory would be deleted along with the container.
 
-```
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -102,7 +102,7 @@ The YAML file above:
 
 The following YAML file, for Pod ExampleA creates a Pod with two containers, one called alphacont, the other called betacont both with access to a shared volume called sharedvol:
 
-```
+```yaml
   containers:
    - name: alphacont
      image: busybox
@@ -119,7 +119,7 @@ The following YAML file, for Pod ExampleA creates a Pod with two containers, one
      emptyDir: {}   
 ```
 
-```
+```bash
 $ kubectl exec -ti exampleA -c betacont -- touch /betadir/foobar
 $ kubectl exec -ti exampleA -c alphacont -- ls -l /alphadir
 
@@ -138,7 +138,7 @@ A `PersistentVolume`(PV) is a storage abstraction used to retain data longer tha
 
 K8s will dynamically use volumes that are available, irrespective of its storage type, allowing claims to any backend storage.
 
-```
+```bash
 kubectl get pv
 kubectl get pvc
 ```
@@ -162,16 +162,16 @@ flowchart LR
 
 The following example shows a basic declaration of `PersistentVolume` using `hostPath` type.
 
-```
+```yaml
 kind: PersistentVolume
 apiVersion: v1
 metadata:
-name: 10Gpv01
+	name: 10Gpv01
 labels:
-type: local
+	type: local
 spec:
-capacity:
-        storage: 10Gi
+	capacity:
+    storage: 10Gi
     accessModes:
         - ReadWriteOnce
     hostPath:
@@ -181,14 +181,15 @@ capacity:
 
 Each type will have its own configuration settings. For example, an already created Ceph or GCE Persistent Disk would not need to be configured, but could be claimed from the provider.
 
-Persistent volumes are cluster-scoped, but persistent volume claims are namespace-scoped. An alpha feature since v1.11 this allows for static provisioning of Raw Block Volumes, which currently support the Fibre Channel plugin. There is a lot of development and change in this area, with plugins adding dynamic provisioning.
+* **Persistent volumes** are cluster-scoped,
+* **Persistent volume claims** are **namespace-scoped**.
 
 
 ### Persistent Volume Claim
 
 With a persistent volume created in the cluster, we can then write a manifest for a claim and use that claim in our pod definition. In the Pod, the volume uses the `PersistentVolumeClaim`.
 
-```
+```yaml
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
@@ -204,7 +205,7 @@ spec:
 
 and in the Pod:
 
-```
+```yaml
 ....
 spec:
     containers:
@@ -217,7 +218,9 @@ spec:
 
 ### Dynamic Provisioning
 
-While handling volumes with a persistent volume definition and abstracting the storage provider using a claim is powerful, a cluster administrator still needs to create those volumes in the first place. Starting with k8s v1.4, Dynamic Provisioning allowed for the cluster to request storage from an exterior, pre-configured source. API calls made by the appropriate plugin allow for a wide range of dynamic storage use.
+Claiming a Volume is powerful, but a cluster administrator still needs to create those volumes in the first place.
+
+Starting with k8s v1.4, Dynamic Provisioning allowed for the cluster to request storage from an exterior, pre-configured source. 
 
 The `StorageClass` API resource allows an administrator to define a persistent volume provisioner of a certain type, passing storage-specific parameters.
 
@@ -225,7 +228,7 @@ With a `StorageClass` created, a user can request a claim, which the API Server 
 
 An example of a `StorageClass` using GCE:
 
-```
+```yaml
 apiVersion: storage.k8s.io/v1        
 kind: StorageClass
 metadata:
@@ -244,9 +247,20 @@ Secrets are for data we don't want to be readable by the naked eye, like passwor
 `kubectl create secret generic --help`
 `kubectl create secret generic mysql --from-literal=password=root`
 
-A secret is not encrypted by default, only base64-encoded. We can see the encoded string iside the secret with kubectl. The secret will be decoded and be presented as a string saved to a file. The file can be used as an environmental variable or in a new directory, similar to the presentation of a volume.
+* A secret is not encrypted by default, only base64-encoded,
+* the encoded string can be seen inside the secret with kubectl,
+* the secret will be decoded and be presented as a string saved to a file,
+* the file can be used as for example, an environmental variable.
 
-In order to encrypt secrets we must create an `EncryptionConfiguration` object with a key and proper identity. Then the `kube-apiserver` needs the `--encryption-provider-config` flag set to a previously configured provider, such as `aescbc` or `ksm`. Once this is enabled, we need to recreate every secret as they are encrypted upon write. Multiple keys are possible. Each key for a provider is tried during decryption oprocess. The fist key of the first provider is used for encryption. To rotate keys, first create a new key, restart (all) `kube-apiserver` processes, then recreate every secret.
+In order to encrypt secrets we must create an `EncryptionConfiguration` object with a key and proper identity. Then the `kube-apiserver` needs the `--encryption-provider-config` flag set to a previously configured provider, such as `aescbc` or `ksm`. Once this is enabled, we need to recreate every secret as they are encrypted upon write. Multiple keys are possible. Each key for a provider is tried during decryption oprocess. The first key of the first provider is used for encryption.
+
+To rotate keys:
+
+1. create a new key,
+2.  restart (all) `kube-apiserver` processes,
+3.  recreate every secret.
+
+
 
 ```
 $ echo LFTr@1n | base64
@@ -268,7 +282,7 @@ Prior to Kubernetes v1.18 secrets (and configMaps) were automatically updated. T
 
 A secret can be used as an environmental variable in a Pod. Here is an example:
 
-```
+```yaml
 ...
 spec:
     containers:
@@ -289,7 +303,7 @@ There is no limit to the number of Secrets used, but there is a 1MB limit to the
 
 We can also mount secrets as files using a volume definition in a Pod manifest. The mount path will contain a file whose name will be the key of the secret created with the `kubectl create secret` step eariler.
 
-```
+```yaml
 ...
 spec:
     containers:
@@ -309,7 +323,7 @@ spec:
 
 Once the pod is running, we can verify that the secret is accessible in the container:
 
-```
+```bash
 $ kubectl exec -ti busybox -- cat /mysqlpassword/password
 LFTr@1n
 ```
@@ -331,11 +345,11 @@ ConfigMaps can be consumed in various ways:
 
 Let's say we have `config.js` file. We can create a ConfigMap that contains this file. The `configmap` object will have `data` section containing the content of the file:
 
-```
+```bash
 $ kubectl get configmap foobar -o yaml
 
 ```
-```
+```yaml
 kind: ConfigMap
 apiVersion: v1
 metadata: 
@@ -350,7 +364,7 @@ Like secrets, we can use ConfigMaps as env variables or using a volume mount. Th
 
 In the case of environment variables, our Pod manifest will use `valueFrom` key and the `configMapKeyRef` value to read the values. For instance:
 
-```
+```yaml
 env:
 - name: SPECIAL_LEVEL_KEY
   valueFrom:
@@ -361,7 +375,7 @@ env:
 
 With volumes, we can define a volume with the configMap type in our pod and mount it where it needs to be used:
 
-```
+```yaml
 volumes:
   - name: config-volume
     configMap:
@@ -372,7 +386,7 @@ volumes:
 
 The `status` output is generated when the information is requested:
 
-```
+```yaml
 status:
   availableReplicas: 2
   conditions:
@@ -403,7 +417,7 @@ Shows how often the deployment has been updated. This information can be used to
 
 The API server allows for the configurations settings to be updated for most values(but some of them are immutable, depends on k8s version). A common update is to change number of replicas running.
 
-```
+```bash
 $ kubectl scale deploy/dev-web --replicas=4
 deployment "dev-web" scaled
 
@@ -414,7 +428,7 @@ dev-web  4        4        4           1          12m
 
 Non-immutable values can be also edited via a text editor.
 
-```
+```yaml
 $ kubectl edit deployment nginx
 
 ....
@@ -438,7 +452,7 @@ Another option to perform a rollback is the `--record` option of the `kubectl` c
 > 
 > The `--record` option has been deprecated. There is not a suggested replacement, but it's still possible to use own annotations to track the intended changes.
 
-```
+```yaml
 
  kubectl set image deploy mydeploy myapp=myapp:2.9 --record
 deployment.apps/mydeploy image updated
@@ -453,7 +467,7 @@ metadata:
 
 Should an update fail, we can roll back the change to a working version with `kubectl rollout undo`:
 
-```
+```bash
 $ kubectl set image deployment/mydeploy myapp=myapp:3.0
 deployment.apps/mydeploy image updated
 
@@ -481,7 +495,7 @@ mydeploy-33781556678-eq5i6 1/1   Running 0        7s
 
 We can roll back to a specific revision with the `--to-revision=2` option. We can also edit a Deployment using the `kubectl edit` command. One can also pause a Deployment, and then resume.
 
-```
+```bash
 $ kubectl rollout pause deployment/mydeploy
 deployment.apps/test2 paused
 

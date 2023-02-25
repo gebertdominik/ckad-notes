@@ -24,7 +24,7 @@ spec:
     image: nginx
     ports:
     - containerPort: 80
- ```
+```
 
  `kubectl create -f basic.yaml`
 
@@ -66,7 +66,7 @@ spec:
     - containerPort: 80
   - name: fdlogger
     image: fluent/fluentd
- ```
+```
 
  `kubectl create -f basic.yaml`
 
