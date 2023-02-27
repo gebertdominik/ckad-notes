@@ -24,7 +24,7 @@
 
 * `LoadBalancer` - the `LoadBalancer` service was created to pass requests to a cloud provider like GKE or AWS. Private cloud solutions also may implement this service type if there is a cloud provider plugin, such as with CloudStack and OpenStack. Even without a cloud provider, the address is made available to public traffic, and packets are spread among the Pods in the deployment automatically.
 
-* `Externalname` - a newer service is `ExternalName`, which is a bit different. It has no selectors, nor does it define ports or endpoints. It allows the retur of an alias to an external service. The redirection happens at the DNS level, not via a proxy or forward. This object can be useful for services not yet brought into the K8s cluster. A simple change of the type in the future would redirect traffic to the internal objects. As CoreDNS has become more stable, this service is not used as much.
+* `Externalname` - a newer service is `ExternalName`, which is a bit different. It has no selectors, nor does it define ports or endpoints. It allows the return of an alias to an external service. The redirection happens at the DNS level, not via a proxy or forward. This object can be useful for services not yet brought into the K8s cluster. A simple change of the type in the future would redirect traffic to the internal objects. As CoreDNS has become more stable, this service is not used as much.
 
 ## Services Diagram
 
@@ -34,9 +34,17 @@ In v1.0, services ran in `userspace` mode as TCP/UDP over IP or Layer 4. In the 
 
 There is a traffic graph from [Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/service/)
 
-![`traffic_from_clusterip_to_pod`](images/007_clusterip_to_pod_traffic.png)
+![`traffic_from_clusterip_to_pod`](./images/007_clusterip_to_pod_traffic.png)
 
-In the `iptables` proxy mode, kube-proxy continues to monitor the API server for changes in Service and Endpoint objects, and updates rules for each object when created or removed. One limitation to the new mode is an inablility to connect to a Pod should the original request fail, so it uses a `Readiness Probe` to ensure all containers are functional prior to connection. This mode allows for up to approx. 5000 nodes. Assuming multiple Services and Pods per node, this leads to a bottleneck in the kernel
+In the `iptables` proxy mode:
+
+* kube-proxy monitors the API server for changes in Service and Endpoint objects,
+
+* updates rules for each object when created or removed. 
+
+  
+
+One limitation to the new mode is an inablility to connect to a Pod should the original request fail, so it uses a `Readiness Probe` to ensure all containers are functional prior to connection. This mode allows for up to approx. 5000 nodes. Assuming multiple Services and Pods per node, this leads to a bottleneck in the kernel
 
 Another mode beginning in v1.9 is `ipvs`. While in beta, and expected to change, it works in the kernel space for greater speed, and allows for a configurable load-balancing algorithm, such as round-robin, shorterst expected delay, least connection and several others. This can be helpful for large clusters, much past the previous 5000 node limitation. This mode assumes IPVS kernel modules are installed and running prior to kube-proxy. Clusters built with kubeadm do not enable ipvs by default, but this can be passed during cluster initialization.
 
@@ -48,13 +56,13 @@ Labels are used to determine which Pod should receive traffic from a service. La
 
 The default update pattern is for a rolling deployment, where new Pods are added, with different versions of an applications, and due to automatic load balancing, receive traffic along with previous versions of the application.
 
-Should there be a difference in applications deployed, such that clients would have issues communicating with different versions, we may consider a more specific label for the deployment, which includes a version number. When the deployment creates a new replication controller for the update, the label would not match. Once the new Pods have been created, and perhaps allowed to fully initialize, we would edit the laels for which the Service connects. Traffic would shift to the new and ready version, minimizing client version confusion.
+Should there be a difference in applications deployed, such that clients would have issues communicating with different versions, we may consider a more specific label for the deployment, which includes a version number. When the deployment creates a new replication controller for the update, the label would not match. Once the new Pods have been created, and perhaps allowed to fully initialize, we would edit the labels for which the Service connects. Traffic would shift to the new and ready version, minimizing client version confusion.
 
 ## Accessing Application with a Service
 
 The basic step to access a new service is to use `kubectl`
 
-```
+```bash
 $ kubectl expose deployment/nginx --port=80 --type=NodePort
 $ kubectl get svc
 NAME         CLUSTER-IP   EXTERNAL-IP   PORT(S)        AGE 
@@ -62,7 +70,8 @@ kubernetes   10.0.0.1     <none>        443/TCP        18h
 nginx        10.0.0.112   <none>        80:31230/TCP   5s
 
 $ kubectl get svc nginx -o yaml
-
+```
+```yaml
 apiVersion: v1
 kind: Service
 ...
@@ -74,7 +83,15 @@ spec:
 Open browser http://<Public IP>:31230
 ```
 
-The `kubectl expose` command created a service for the nginx deployment. the service used port 80 and generated a random port on all the nodes. A particular `port` and `targetPort` can also be passed during the object creation to avoid random values. The `targetPort` defaults to the port, but could be set to any value, including a string referring to a port on a backend Pod. Each Pod could have a different port, but traffic is still passed via the name. Switching traffic to a different port would maintain a client connection, while changing versions of software, for example.
+The `kubectl expose` command:
+
+* created a service for the nginx deployment. 
+
+* the service used port 80
+
+* generated a random port on all the nodes. 
+
+A particular `port` and `targetPort` can also be passed during the object creation to avoid random values. The `targetPort` defaults to the port, but could be set to any value, including a string referring to a port on a backend Pod. Each Pod could have a different port, but traffic is still passed via the name. Switching traffic to a different port would maintain a client connection, while changing versions of software, for example.
 
 The `kubectl get svc` command gave us a list of all the existing services, and we saw the nginx service, which was created with an internal cluster IP.
 
@@ -88,11 +105,11 @@ Typically, a service creates a new endpoint for connectivity. Should we want to 
 
 ## ClusterIP
 
-For inter-cluster communication, frontends talking to backents can use CliusterIPs. These addresses and enpoints only work within the cluster.
+For inter-cluster communication, frontends talking to backends can use CliusterIPs. These addresses and enpoints only work within the cluster.
 
 ClusterIP is the default type of service created.
 
-```
+```yaml
 spec:
   clusterIP: 10.108.95.67
   ports:
@@ -104,9 +121,9 @@ spec:
 
 ## NodePort
 
-NodePort is a simple connection from a high-port router to a ClusterIP using iptables, or ipvs in newer versions. The creation of a NodePort generated a ClusterIP by default. Traffic is routed from the NodePort to the ClusterIP. Only high ports can be used, as declared in the source code. the NodePOrt is accessible via calls to `<NodeIP>:<NodePort>`.
+NodePort is a simple connection from a high-port router to a ClusterIP using iptables, or ipvs in newer versions. The creation of a NodePort generated a ClusterIP by default. Traffic is routed from the NodePort to the ClusterIP. Only high ports can be used, as declared in the source code. the NodePort is accessible via calls to `<NodeIP>:<NodePort>`.
 
-```
+```yaml
 spec:
   clusterIP: 10.97.191.46
   externalTrafficPolicy: Cluster
@@ -114,7 +131,7 @@ spec:
   - nodePort: 31070
     port: 80
     protocol: TCP
-    targetPort: 800a0
+    targetPort: 8000
   selector:
     io.kompose.service: nginx
   sessionAffinity: None
@@ -152,13 +169,13 @@ An ingress resource is an API object containing a list of rules matched against 
 
 ## Ingress Controller
 
-Handling a few requestscan be easily done. However, managing thousands or tens of thousands of services can create inefficiencies. The use of an ingress controller manages ingress rules to route traffic to existing services. Ingress can be used for fan out to services, name-based hosting, TLS, or load balancing. As a security has become more of a concern, ingress controller pods are no longer given access to low-numbered ports. Instead the assumption is a single high-numbered port, with an external load balancer in use to provide typical low-numbered ports.
+The use of an ingress controller manages ingress rules to route traffic to existing services. Ingress can be used for fan out to services, name-based hosting, TLS, or load balancing. As a security has become more of a concern, ingress controller pods are no longer given access to low-numbered ports. Instead the assumption is a single high-numbered port, with an external load balancer in use to provide typical low-numbered ports.
 
 There are several ingress controllers such as **nginx** used everywhere, and GCE embedded into a cloud provider. **Traefik** and **HAProxy** are in common use as well. More controllers are available, as is support for more HTTPS/TLS modes, combining L4 and L7 ingress and requesting name or IP via claims. General searching or looking at [Artifact Hub](https://artifacthub.io/) for Helm charts can be useful.
 
 Ingress Controller vs Multiple NodePorts:
 
-![Ingress Controller vs Multiple NodePorts](images/008_ingress_controller_vs_multiple_nodeports.png)
+![Ingress Controller vs Multiple NodePorts](./images/008_ingress_controller_vs_multiple_nodeports.png)
 
 ## Service Mesh
 

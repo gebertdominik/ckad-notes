@@ -402,19 +402,22 @@ metadata:
 
 ## Network Security Polcies
 
-Network Security Polcies are usually set up by administrators. Anyway it's stil important to understand how they work and could prevent our microservices from communicating with each other or outside the cluster.
+Network Security Polcies are usually set up by administrators.
 
-By default, all pods can reach each other. All ingress and egress traffic is allowed. this has been a high-level networking requirement in K8s. However, notwork isolation can be configured and traffic to pods can be blocked. In newer version of k8s, egress traffic can also be blocked. This is done by configuring `NetworkPolicy`. As all traffic is allowed, we may want to implement a policy that drops all traffic, then, other policies which allow desired ingress and egress trafic.
+* By default, all pods can reach each other. 
+* All ingress and egress traffic is allowed - this has been a high-level networking requirement in K8s. 
+* network isolation can be configured and traffic to/from pods can be blocked using `NetworkPolicy`
+* As all traffic is allowed, we may want to implement a policy that drops all traffic, then, other policies which allow desired ingress and egress trafic.
 
 The `spec` of the policy can narrow down the effect to a particular namespace, which can be handy. Further settings include a `podSelector`, or label, to narrow down which Pods are affected. Further ingress and egress settings declare traffic to and from IP addresses and ports.
 
 Not all network providers support `NetworkPolicies` kind. A non-exhaustive list of providers with support includes Calico, ROmana, Cilium, Kube-router and WeaveNet.
 
-In previous versions of K8s, therewas a requirement to annotate a namespace as part of network isolation, specifically the `net.beta.kubernetes.io/network-policy=value`. Some network plugins may still require this setting.
+In previous versions of K8s, there was a requirement to annotate a namespace as part of network isolation, specifically the `net.beta.kubernetes.io/network-policy=value`. Some network plugins may still require this setting.
 
 The use of policies has become stable, noted with the `v1` `apiVersion`. The example below narrows down the policy to affect the default namespace.
 
-Only Pods with the label of `role: db` will be affected by this policy, and the policy has both Ingress and Egress settings.
+Only Pods with the label of `role: db` will be affected by the policy below, and the policy has both Ingress and Egress settings.
 
 The `ingress` setting includes a `172.17` network, with a smaller range of `171.17.1.0` IPs being excluded from this traffic.
 
