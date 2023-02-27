@@ -18,20 +18,18 @@
 * Explain the API flow of API requests
 * Configure authorization rules
 * Examine authentication policies
-* Restric network traffic with network policies
+* Restrict network traffic with network policies
 
 ## Accessing the API
 
 To access the API to perform any action in k8s, we need to go through three main steps:
 
 * Authentication (Certificate or webhook)
-* Authorization (RBAC or Webhook)
-* Admission Controls
+* Authorization (RBAC or Webhook) - check against existing policies
+* Admission Controls - check the actual content of the objects being created and validate them before admitting the request
 
-![access_control_overview](/images/006_access_control_overview.svg)
+![access_control_overview](./images/006_access_control_overview.svg)
 *Soruce: kubernetes.io*
-
-The first step is authentication, where a request needs to go through any authentication module that has been configured. At the authorization step, the request will be checked against existing policies. It will be authorized if the user has the permissions to perform requested actions. Then the request will go through the last step of admission controllers. In general admission controllers will check the actual content of the objects being created and validate them before admitting the request.
 
 In addition, the request reaching the API server over the network is encrypted using TLS. This needs to be configured using SSL certificates.
 
@@ -45,7 +43,7 @@ In addition, the request reaching the API server over the network is encrypted u
 There are three main points to remember with authentication in k8s:
 
 * In its straightforward form, authentication is done with certificates, tokens or basic authentication (i.e. username or password)
-* Username are not created by the API, but should be managed by the operating system or an external server
+* Username are not created by the API, and should be managed by the operating system or an external server
 * System accounts are used by processes to acccess the API (read [Configure Service Accounts for Pods](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) for more)
 
 There are also two types of more advanced authentication mechanisms:
@@ -79,7 +77,7 @@ Each is tried until successful, and the order is not guaranteed. Anonymous acces
 
 ## Authorization
 
-There are three main authorization modes and two globabl Deny/Allow settings. The three main modes are:
+There are three main authorization modes and two global Deny/Allow settings. The three main modes are:
 
 * Node
 * RBAC
@@ -96,11 +94,7 @@ The authorization modes implement policies to allow requests. Attributes of the 
 
 ### RBAC
 
-RBAC stands for Role Based Access Control. RBAC is a method ofregulating access to computer or network resources based on the roles of individual users within organisation. RBAC uses `rbac.authorization.k8s.io` API group.
-
-> **Note**
->
->  RBAC documentation can be found [here](https://kubernetes.io/docs/reference/access-authn-authz/rbac/).
+RBAC stands for Role Based Access Control. RBAC is a method of regulating access to computer or network resources based on the roles of individual users within organisation. RBAC uses `rbac.authorization.k8s.io` API group. RBAC documentation can be found [here](https://kubernetes.io/docs/reference/access-authn-authz/rbac/).
 
 
 #### Roles
@@ -109,7 +103,7 @@ An RBAC `Role` and `ClusterRole` contains rules that represent a set of permissi
 
 A `Role` always sets permissions within particular namespace, when we create a Role, we need to specify the namespace it belongs in.
 
-```
+```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -139,7 +133,7 @@ Because `ClusterRoles` are cluster-scoped, we can use them to grant access to:
 
 For example we can use `ClusterRole` to allow a particular user to run `kubectl get pods --all-namespaces`
 
-```
+```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -156,13 +150,13 @@ rules:
 
 #### Bindings
 
-A role binding grands the permissions defined in a role to a user or set of users. It holds a list of subjects(users/groups/service accounts), and a reference to the role being granted.
+A role binding grants the permissions defined in a role to a user or set of users. It holds a list of subjects(users/groups/service accounts), and a reference to the role being granted.
 
 A `RoleBinding` may reference any `Role` in the same namespace. Alternatively a `RoleBinding` can reference a `ClusterRole` and bind that `ClusterRole` to the namespace of the `RoleBinding`.
 
 Even though the following example refers to a ClusterRole, "dave" will only be able to read Secrests in the "development" namespace, because the Role Binding's namespace is "development"
 
-```
+```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 # This role binding allows "dave" to read secrets in the "development" namespace.
 # You need to already have a ClusterRole named "secret-reader".
@@ -183,9 +177,9 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-`ClusterRoleBinding` is similar to `ClusterRole` but it's purpose is to grant permissions across a qhile cluster.
+`ClusterRoleBinding` is similar to `ClusterRole` but it's purpose is to grant permissions across a whole cluster.
 
-```
+```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 # This cluster role binding allows anyone in the "manager" group to read secrets in any namespace.
 kind: ClusterRoleBinding
@@ -213,7 +207,7 @@ RBAC refers to resources using exactly the same name that appears in the URL for
 
 In this case , `pods` is the namespaced resource for Pod resources, and `log` is a subresource of `pods`. To represent this in an RBAC role, use a slash to delimit the resource and subresource. To allow a subject to read `pods` and also access the `log` subresource for each of those pods, we write:
 
-```
+```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -227,7 +221,7 @@ rules:
 
 Resources can be also referred by name list. The following example restricts its subject to only `get` or `update` a ConfigMap named `my-configmap`:
 
-```
+```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -254,7 +248,7 @@ rules:
 
 We can aggregate `ClusterRoles` into one combined `ClusterRole` A controller, running as part of the cluster control plane, watches for `ClusterRole` objects with an `aggregationRule` set. The `aggregationRule` defines a label selector that the controller uses to match other `ClusterRole` objects that should be combined into the `rules` field of this one.
 
-```
+```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -266,9 +260,9 @@ aggregationRule:
 rules: [] # The control plane automatically fills in the rules
 ```
 
-If we create a new ClusterRole taht matches the label selector of an existing aggregated ClusterRole, that change triggers adding the new rules into the aggregated ClusterRole. Here is an example that adds rules to the "monitoring" CluserRole, by creating another Cluster role labeled `rbac.example.com/aggregate-to-monitoring: "true"`
+If we create a new ClusterRole that matches the label selector of an existing aggregated ClusterRole, that change triggers adding the new rules into the aggregated ClusterRole. Here is an example that adds rules to the "monitoring" CluserRole, by creating another Cluster role labeled `rbac.example.com/aggregate-to-monitoring: "true"`
 
-```
+```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -302,7 +296,7 @@ Here is a short summary of the RBAC process, typically done by the cluster admin
 
 Admissions controllers can access the conent of the objects being created by the requests. They can modify content, validate it, and potentially deny request.
 
-Admission controllers are needed for cenrtain features to work properly. Controllers have been added as K8s matured. Started with 1.13.1 release of the `kube-apiserver`, the admission controllers are now compiled into the binary, instead of a list passed during execution. To enable or disable, we can pass the following options, changing out the plugins we want to enable or disable:
+Admission controllers are needed for certain features to work properly. Controllers have been added as K8s matured. Started with 1.13.1 release of the `kube-apiserver`, the admission controllers are now compiled into the binary, instead of a list passed during execution. To enable or disable, we can pass the following options, changing out the plugins we want to enable or disable:
 
 * `--enable-admission-plugins=NamespaceLifecycle,LimitRanger`
 * `--disable-admission-plugins=PodNodeSelector`
@@ -317,7 +311,7 @@ Pods and containers can be given security constraints to limit what processes ru
 
 This security limitation is called a security context. It can be defined for the entire pod, or for each container.
 
-For example, if we want to enforce policy taht containters cannot run their process as the root user, we can add a pod security context like:
+For example, if we want to enforce policy that containters cannot run their process as the root user, we can add a pod security context like:
 
 ```
 apiVersion: v1
@@ -332,7 +326,7 @@ spec:
     name: nginx
 ```
 
-Then when we create this Pod, we will see a warning that the container is trying to rut as root, which is not allowed. Hence, the pod will never run:
+Then when we create this Pod, we will see a warning that the container is trying to run as root, which is not allowed. Hence, the pod will never run:
 
 ```
 $ kubectl get pods
@@ -348,41 +342,13 @@ nginx  0/1    container has runAsNonRoot and image will run as root  0         1
 
 > **Warning**
 >
-> Pod Security Policies are deprecated due to usability issues and confusion, but still in common usage. More about this can be found in the [PodSecurityPolicy Deprecation](https://kubernetes.io/blog/2021/04/06/podsecuritypolicy-deprecation-past-present-and-future/) blog post.
+> PodSecurityPolicy was [deprecated](https://kubernetes.io/blog/2021/04/08/kubernetes-1-21-release-announcement/#podsecuritypolicy-deprecation) in Kubernetes v1.21, and removed from Kubernetes in v1.25. More about this can be found in the [PodSecurityPolicy Deprecation](https://kubernetes.io/blog/2021/04/06/podsecuritypolicy-deprecation-past-present-and-future/) blog post. 
 
-To automate the enforcement of security contexts, we can define `PodSecurityPolicies(PSP)`. A PSP is defined via a standard k8s manifest following the PSP API Schema.
 
-These policies are cluster-level rules that govern what pod can do, what they can access, what user they run as, etc.
-
-For instance, if we don't want any of the containers in our cluster to run as the root user, we can define a PSP to that effect.
-
-While PSP has been helpful, there are other methods gaining popularity. The [Open Policy Agent(OPA)](https://www.openpolicyagent.org/), provides a unified set of tools and policy framework. This allows a single point of configuration for all of our cloud dependencies.
-
-OPA can be deployed as an admission controller inside of K8s, which allows OPA to enforce or mutate requests as they are received. Using the OPA Gatekeeper it can be deployed using Custom Resource Definitions.
-
-An example of PSP:
-
-```
-apiVersion: policy/v1beta1
-kind: PodSecurityPolicy
-metadata:
-  name: restricted
-spec:
-  seLinux:
-    rule: RunAsAny
-  supplementalGroups:
-    rule: RunAsAny
-  runAsUser:
-    rule: MustRunAsNonRoot
-  fsGroup:
-    rule: RunAsAny
-```
-
-For Pod Security Policies to be enabled, we need to configure the admission controller of the controller-manager to contain `PodSecurityPolicy`. These policies make even more sense when coupled with the RBAC configuration in our cluster. This will allow os to finely tune what our users are allowed to run and what capabilities and low level privileges their containers will have.
 
 ## Pod Security Standards
 
-There ae 3 policies to limit what a pod is allowed to do. Those policies are cumulative. The namespace is given the appropriate label for each policy. New pods will then be restricted. Existing pods would not be changed by an edit to the namespace.
+There are 3 policies to limit what a pod is allowed to do. Those policies are cumulative. The namespace is given the appropriate label for each policy. New pods will then be restricted. Existing pods would not be changed by an edit to the namespace.
 
 > **Note**
 >
@@ -392,7 +358,7 @@ There ae 3 policies to limit what a pod is allowed to do. Those policies are cum
 
 No restrictions from this policy.
 
-```
+```yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -406,7 +372,7 @@ metadata:
 
 Minimal restrictions. Does not allow known privilege escalations.
 
-```
+```yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -422,7 +388,7 @@ metadata:
 
 Most restricted policy. Follows current pod hardening best practicies.
 
-```
+```yaml
 apiVersion: v1
 kind: Namespace
 metadata:
