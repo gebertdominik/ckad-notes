@@ -47,6 +47,8 @@ markmap:
 - create a `CustomResourceDefinition`
 - create `CustomResource` for a given `CustomResourceDefinition`
 ### Understand authentication, authorization and admission control
+- configure external auth method used by `kube-apiserver`
+- configure authz method used by `kube-apiserver`
 ### Understanding and defining resource requirements, limits and quotas
 - create a `ResourceQuota` for a given namespace
 - define cpu/memory limits for a container in a `Pod`
@@ -80,10 +82,13 @@ markmap:
 
 ## Application observability and maintenance (15%)
 ### Understand API deprecations
+- get list of available API groups using k8s REST API
 ### Implement probes and health checks
 - define `readinessProbe` for a container(httpGet,tcpSocket,exec)
 - define `livenessProbe` for a container(httpGet,tcpSocket,exec)
 ### Use provided tools to monitor K8s applications
+- display kubernetes config `kubectl config view`
+- use `kubectl proxy` to access k8s API
 ### Utilize container logs
 - display container log(single&multi container pods)
 ### Debugging in K8s
