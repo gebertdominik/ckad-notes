@@ -1,5 +1,7 @@
 # CKAD preparation notes
-Preparation notes for CKAD exam
+Preparation notes for the Certified Kubernetes Application Developer (CKAD) exam.
+
+![ckad_curriculum_map](./images/012_ckad_curriculum_map.png)
 
 ## Table of contents
 
