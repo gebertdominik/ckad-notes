@@ -43,11 +43,12 @@ markmap:
 - use a plain text env variable in a `Deployment` definition
 - understand the difference between `Deployment` and `StatefulSet`
 ### Use the Helm package manager to deploy existing packages
-- TODO
-- TODO
-- TODO
-
-
+- install application from a chart
+- upgrade application
+- rollback application upgrade
+- pull helm chart from hub/repo
+- add repo to helm
+- search for an image in hub/repo
 ## Application Environment, Configuration and Security (25%)
 ### Discover and use resources that extend Kubernetes (CRD)
 - display available `CustomResourceDefinitions`
