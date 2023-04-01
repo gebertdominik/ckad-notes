@@ -8,7 +8,7 @@ k run custom-nginx --image nginx --port 8080   # Start a nginx pod and let the c
 k run httpd --image httpd:alpine --expose --port 80 #Create pod and a ClusterIP service to expose pod using targetPort 80
 k create cm webapp-config-map --from-literal APP_COLOR=darkblue --from-literal APP_OTHER=disregard
 
-```
+ ```yaml
     containers:
     - env:
       - name: APP_COLOR
@@ -18,7 +18,7 @@ k create cm webapp-config-map --from-literal APP_COLOR=darkblue --from-literal A
             key: APP_COLOR # The key to fetch.        configMapRef:
 ```
 
-```
+ ```yaml
 spec:
   containers:
   - image: kodekloud/simple-webapp-mysql
@@ -29,7 +29,7 @@ spec:
 
 kubectl exec ubuntu-sleeper -- whoami # Check the user that is running the container
 
-```
+ ```yaml
 spec:
   securityContext:
     runAsUser: 1001
@@ -40,7 +40,7 @@ spec:
       - all
  ```
 
- ```
+ ```yaml
   containers:
     resources:
       limits:
@@ -51,7 +51,7 @@ spec:
 
 k create sa dashboard-sa
 
-```
+ ```yaml
 spec:
   selector:
     matchLabels:
@@ -69,7 +69,7 @@ k set serviceaccount deployment web-dashboard dashboard-sa # bad autocompletion
 kubectl taint nodes node01  spray=mortein:NoSchedule # add taint
 k taint node controlplane node-role.kubernetes.io/control-plane:NoSchedule- # remove taint
 
-```
+ ```yaml
 spec:
   tolerations:
     - key: spray
@@ -77,3 +77,62 @@ spec:
       effect: NoSchedule
       operator: Equal
 ```
+
+```yaml
+
+spec:
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: color
+                operator: In
+                values:
+                - blue
+```
+
+kubectl -n elastic-stack logs kibana
+
+```yaml
+spec:
+  containers:
+  - name: simple-webapp
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: 8080
+    livenessProbe:
+      httpGet:
+        path: /live
+        port: 8080
+      periodSeconds: 1
+      initialDelaySeconds: 80
+```
+
+k label node node01 color=blue # Adds label to a node
+
+kubectl top node ## CPU/memory stats for nodes
+
+```yaml
+spec:
+  initContainers:
+  - command:
+    - sh
+    - -c
+    - sleep 600
+    image: busybox
+    imagePullPolicy: IfNotPresent
+    name: warm-up-1
+```
+
+k get pods -l env=prod,bu=finance,tier=frontend # Get pods with labels
+k set image deployment/frontend simple-webapp=kodekloud/webapp-color:v2
+k create job throw-dice-job --image kodekloud/throw-dice
+`kubectl create cronjob my-job --image=busybox --schedule="*/1 * * * *"`
+
+PVC and PV can't be created using imperative command - go to doc, and grab definition
+
+kubectl config --kubeconfig=/root/my-kube-config use-context research # Switch context to a new one defined in a separate file
