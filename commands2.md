@@ -114,7 +114,7 @@ spec:
 
 k label node node01 color=blue # Adds label to a node
 
-kubectl top node ## CPU/memory stats for nodes
+`kubectl top node ## CPU/memory stats for nodes
 
 ```yaml
 spec:
@@ -136,3 +136,30 @@ k create job throw-dice-job --image kodekloud/throw-dice
 PVC and PV can't be created using imperative command - go to doc, and grab definition
 
 kubectl config --kubeconfig=/root/my-kube-config use-context research # Switch context to a new one defined in a separate file
+
+
+helm search hub wordpress
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm search repo joomla
+helm install bravo bitnami/drupal
+helm uninstall bravo
+helm pull --untar bitnami/apache
+
+k api-resources
+
+kubectl proxy 8001&
+root@controlplane:~# curl localhost:8001/apis/authorization.k8s.io
+
+Add the --runtime-config=rbac.authorization.k8s.io/v1alpha1 option to the kube-apiserver.yaml # to enable v1alpha1 version
+k convert -f ingress-old.yaml > ingress-new.yaml # convert tool is not installed by default - follow doc to install
+
+k get role
+kubectl describe rolebinding kube-proxy -n kube-system
+k get pods --as dev-user
+kubectl create role developer --verb=create --verb=list --verb=delete --resource=pods # k create role -h
+kubectl create rolebinding  dev-user-binding --role=developer --user=dev-user # k create rolebinding -h
+
+kubectl create clusterrolebinding storage-admin --clusterrole=storage-admin --user=michelle
+`k create clusterrole storage-admin --verb='*' --resource=sc --resource=persistentvolumes`
+
+kubectl exec -it kube-apiserver-controlplane -n kube-system -- kube-apiserver -h | grep 'enable-admission-plugins' # enabled admission controller including default ones
