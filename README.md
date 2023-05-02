@@ -15,6 +15,9 @@ Preparation notes for the Certified Kubernetes Application Developer (CKAD) exam
 
 ## Vim config for editing yaml files
 
+> **Note**
+> This is configured in the exam environment, but might be helpful to configure it on your local environment when preparing for the exam.
+
 Create file with vim config 
 `vim ~/.vimrc`
 
